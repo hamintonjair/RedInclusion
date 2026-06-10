@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  
+  --color-brand-green: #00A86B;
+  --color-brand-blue: #0072B1;
+  --color-brand-red: #E31E24;
+  --color-brand-light: #F8FAFC;
+  --color-brand-dark: #1E293B;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-brand-light text-brand-dark;
+  }
+}
+
+.glass-morphism {
+  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl;
+}
+
+.sidebar-item {
+  @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-brand-green/10 text-slate-600 hover:text-brand-green;
+}
+
+.sidebar-item-active {
+  @apply flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-green text-white shadow-lg shadow-brand-green/30;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #e2e8f0;
+  border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #cbd5e1;
+}
+

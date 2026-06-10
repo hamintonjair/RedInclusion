@@ -1,0 +1,11 @@
+{
+  "name": "Red de Inclusión - Quibdó",
+  "description": "Sistema de gestión integral para programas de inclusión social, beneficiarios y funcionarios de la Secretaría de Inclusión y Cohesión Social.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

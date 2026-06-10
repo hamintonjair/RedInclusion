@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 120" width="500" height="120">
+  <rect width="100%" height="100%" fill="none" />
+  <!-- Left Side: Circular Badge of Municipio de Quibdo -->
+  <g transform="translate(10, 10)">
+    <!-- Outer ring of Municipio de Quibdó -->
+    <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#00A859" stroke-width="2" />
+    <circle cx="50" cy="50" r="45" fill="none" stroke="#CC0000" stroke-width="1.5" />
+    
+    <!-- We clip/embed the official crest of Quibdó -->
+    <image href="https://upload.wikimedia.org/wikipedia/commons/0/0f/Escudo_de_quibdo.jpg" x="12" y="12" width="76" height="76" />
+    
+    <!-- Green/Red Accent around the badge -->
+    <path d="M 50 2 C 76.5 2, 98 23.5, 98 50 C 98 76.5, 76.5 98, 50 98" fill="none" stroke="#CC0000" stroke-width="3" stroke-dasharray="8 4" />
+    <path d="M 50 2 C 23.5 2, 2 23.5, 2 50 C 2 76.5, 23.5 98, 50 98" fill="none" stroke="#00A859" stroke-width="3" />
+  </g>
+  
+  <!-- Right Side: Clean polished Typography -->
+  <!-- "ALCALDÍA DE" -->
+  <text x="135" y="52" font-family="'Inter', -apple-system, sans-serif" font-size="28" font-weight="800" fill="#00A859" letter-spacing="1.5">ALCALDÍA DE</text>
+  
+  <!-- "QUIBDÓ" -->
+  <text x="135" y="98" font-family="'Outfit', 'Space Grotesk', 'Inter', -apple-system, sans-serif" font-size="52" font-weight="900" fill="#CC0000" letter-spacing="2">QUIBDÓ</text>
+</svg>

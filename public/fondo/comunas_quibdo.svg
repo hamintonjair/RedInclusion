@@ -1,0 +1,34 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="900" fill="#F8FAFC"/>
+  
+  <!-- River Atrato (Simplified) -->
+  <path d="M200 0C250 200 150 400 300 600C450 800 350 900 350 900" stroke="#E2E8F0" stroke-width="40" fill="none" opacity="0.5"/>
+  
+  <!-- Comunas (Simplified placeholders) -->
+  <!-- Comuna 1: Norte -->
+  <path d="M300 100L600 50L700 200L400 250Z" fill="#ffedf0" stroke="#ff8a9a" stroke-width="2"/>
+  <text x="450" y="150" font-family="sans-serif" font-weight="bold" fill="#ff8a9a" font-size="20">COMUNA 1</text>
+
+  <!-- Comuna 2 -->
+  <path d="M600 50L900 100L1000 300L700 200Z" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+  <text x="750" y="150" font-family="sans-serif" font-weight="bold" fill="#fb923c" font-size="20">COMUNA 2</text>
+
+  <!-- Comuna 3 -->
+  <path d="M400 250L700 200L800 450L500 500Z" fill="#fefce8" stroke="#facc15" stroke-width="2"/>
+  <text x="550" y="320" font-family="sans-serif" font-weight="bold" fill="#facc15" font-size="20">COMUNA 3</text>
+
+  <!-- Comuna 4 -->
+  <path d="M800 450L1100 400L1150 700L850 750Z" fill="#f0fdf4" stroke="#4ade80" stroke-width="2"/>
+  <text x="920" y="550" font-family="sans-serif" font-weight="bold" fill="#4ade80" font-size="20">COMUNA 4</text>
+
+  <!-- Comuna 5 -->
+  <path d="M500 500L850 750L700 850L400 800Z" fill="#fef2f2" stroke="#f87171" stroke-width="2"/>
+  <text x="580" y="700" font-family="sans-serif" font-weight="bold" fill="#f87171" font-size="20">COMUNA 5</text>
+
+  <!-- Comuna 6 -->
+  <path d="M700 850L1000 800L1100 900H700Z" fill="#faf5ff" stroke="#c084fc" stroke-width="2"/>
+  <text x="850" y="850" font-family="sans-serif" font-weight="bold" fill="#c084fc" font-size="20">COMUNA 6</text>
+
+  <text x="20" y="880" font-family="sans-serif" font-size="12" fill="#cbd5e1">MAPA BASE SISTEMA RED DE INCLUSIÓN - QUIBDÓ</text>
+</svg>
