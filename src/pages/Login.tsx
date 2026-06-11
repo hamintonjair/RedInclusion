@@ -14,6 +14,7 @@ export const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Login form submitted:', { email });
     setError('');
     
     if (!email.trim() || !password) {
@@ -22,6 +23,7 @@ export const Login: React.FC = () => {
     }
 
     const success = await login(email.trim(), password);
+    console.log('Login result:', success);
     if (success) {
       const from = (location.state as any)?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
