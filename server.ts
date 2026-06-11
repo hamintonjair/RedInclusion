@@ -16,6 +16,22 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Debug middleware to log all requests
+  app.use((req, res, next) => {
+    const start = Date.now();
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    
+    // Capture original send
+    const originalSend = res.send;
+    res.send = function(body) {
+      const duration = Date.now() - start;
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Status: ${res.statusCode} - Duration: ${duration}ms - Body Length: ${body ? (typeof body === 'string' ? body.length : 'buffer') : 0}`);
+      return originalSend.call(this, body);
+    };
+    
+    next();
+  });
+
   // Connection to MongoDB
   const mongoUri = process.env.MONGODB_URI;
   let db: any = null;
@@ -112,16 +128,21 @@ async function startServer() {
           estado: String(finalUser.estado || 'Activo')
         };
         
-        // Ensure we explicitly set headers and send a string if needed to avoid express issues
-        res.setHeader('Content-Type', 'application/json');
-        return res.status(200).send(JSON.stringify(responseObj));
+        console.log('Login successful, sending response:', JSON.stringify(responseObj));
+        return res.json(responseObj);
       }
       
+      console.log('Login failed: Invalid credentials');
       return res.status(401).json({ error: "Credenciales inválidas" });
     } catch (error: any) {
       console.error("Login route error:", error);
       return res.status(500).json({ error: "Error en el servidor", message: error.message });
     }
+  });
+
+  // Test API
+  app.get("/api/test", (req, res) => {
+    res.json({ message: "API is working", time: new Date().toISOString() });
   });
 
   // Profile Get API
@@ -1560,6 +1581,12 @@ async function startServer() {
       console.error("Error al eliminar asistente:", error);
       res.status(500).json({ error: "Error al eliminar asistente" });
     }
+  });
+
+  // 404 handler for API routes
+  app.all("/api/*", (req, res) => {
+    console.log(`[404 API] ${req.method} ${req.url} - No route matched`);
+    res.status(404).json({ error: "API Route not found", method: req.method, url: req.url });
   });
 
   // Vite middleware for development
