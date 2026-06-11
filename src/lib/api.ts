@@ -33,6 +33,10 @@ api.interceptors.request.use((config) => {
 // Intercept Axios to handle offline gracefully
 api.interceptors.response.use(
   (response) => {
+    console.log(`API Success Interceptor: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      status: response.status,
+      hasData: !!response.data
+    });
     // If it's a GET request, cache the response
     if (response.config.method?.toUpperCase() === 'GET' && response.config.url) {
       const cacheUrl = response.config.url + (response.config.params ? JSON.stringify(response.config.params) : '');

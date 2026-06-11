@@ -58,15 +58,12 @@ async function startServer() {
 
   // Auth API
   app.post("/api/auth/login", async (req, res) => {
-    console.log('Login request received:', { 
-      email: req.body?.email, 
-      hasPassword: !!req.body?.password,
-      method: req.method,
-      url: req.url
-    });
+    res.setHeader('X-Debug0-Reached', 'Yes');
+    console.log('Login Request Body:', JSON.stringify(req.body));
     const { email, password } = req.body;
     
     if (!db) {
+      console.log('DB not available');
       if (email === "admin@quibdo.gov.co" && password === "Admin123*") {
         return res.json({
           id: "1",
@@ -80,26 +77,26 @@ async function startServer() {
     }
 
     try {
-      // Intentar buscar en usuarios o funcionarios como indica el README
+      res.setHeader('X-Debug1-Searching', 'Yes');
+      // Intentar buscar en usuarios o funcionarios
+      console.log('Searching for email:', email);
       let user = await db.collection('usuarios').findOne({ correo_electronico: email });
       let funcionario = !user ? await db.collection('funcionarios').findOne({ email: email }) : null;
       
-      // Si se usan las credenciales de prueba predeterminadas en el Login que no existen explícitamente en la BD:
       if (!user && !funcionario) {
+        console.log('No direct user/funcionario found, checking testing aliases');
         if (email === "admin@quibdo.gov.co") {
-          // Mapear al administrador real de la base de datos (e.g. admin@redinclusion.com)
           funcionario = await db.collection('funcionarios').findOne({ rol: "admin" });
         } else if (email === "funcionario@quibdo.gov.co") {
-          // Mapear al primer funcionario común de la base de datos (e.g. Yordan Solis)
           funcionario = await db.collection('funcionarios').findOne({ rol: "funcionario" });
         }
       }
 
       const finalUser = user || funcionario;
+      console.log('User found:', !!finalUser);
 
-      console.log('Final user check:', !!finalUser);
       if (finalUser) {
-        // En caso de usar los correos de prueba, el password predeterminado "Admin123*" es válido para facilitar el acceso sin que falle por hash
+        res.setHeader('X-Debug2-UserFound', 'Yes');
         let isMatch = false;
         if (finalUser.password_hash) {
           if ((email === "admin@quibdo.gov.co" || email === "funcionario@quibdo.gov.co") && password === "Admin123*") {
@@ -107,13 +104,14 @@ async function startServer() {
           } else {
             isMatch = await bcrypt.compare(String(password), String(finalUser.password_hash));
           }
-        } else if (password === 'Admin123*') { // Fallback for legacy users without hash
+        } else if (password === 'Admin123*') { 
           isMatch = true;
         }
 
-        console.log('Password match:', isMatch);
+        console.log('Password Match:', isMatch);
 
         if (!isMatch) {
+          res.setHeader('X-Debug3-PassFail', 'Yes');
           return res.status(401).json({ error: "Credenciales inválidas" });
         }
 
@@ -128,14 +126,18 @@ async function startServer() {
           estado: String(finalUser.estado || 'Activo')
         };
         
-        console.log('Login successful, sending response:', JSON.stringify(responseObj));
-        return res.json(responseObj);
+        console.log('Login success! Sending:', JSON.stringify(responseObj));
+        res.setHeader('X-Debug4-Success', 'Yes');
+        res.type('application/json');
+        return res.status(200).send(JSON.stringify(responseObj));
       }
       
-      console.log('Login failed: Invalid credentials');
+      console.log('Login failed: User not found');
+      res.setHeader('X-Debug5-NotFound', 'Yes');
       return res.status(401).json({ error: "Credenciales inválidas" });
     } catch (error: any) {
       console.error("Login route error:", error);
+      res.setHeader('X-Debug6-Error', error.message);
       return res.status(500).json({ error: "Error en el servidor", message: error.message });
     }
   });

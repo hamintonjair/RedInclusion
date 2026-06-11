@@ -5,7 +5,7 @@ import App from './App.tsx';
 import './index.css';
 import { registerSW } from 'virtual:pwa-register';
 
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && false) { // Temporarily disabled
   registerSW({ immediate: true });
 }
 
