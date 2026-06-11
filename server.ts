@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import { MongoClient, ObjectId } from 'mongodb';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 dotenv.config();
 
@@ -11,7 +12,9 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(cors());
   app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
 
   // Connection to MongoDB
   const mongoUri = process.env.MONGODB_URI;
@@ -39,6 +42,12 @@ async function startServer() {
 
   // Auth API
   app.post("/api/auth/login", async (req, res) => {
+    console.log('Login request received:', { 
+      email: req.body?.email, 
+      hasPassword: !!req.body?.password,
+      method: req.method,
+      url: req.url
+    });
     const { email, password } = req.body;
     
     if (!db) {
@@ -93,23 +102,25 @@ async function startServer() {
         }
 
         const responseObj = {
-          id: finalUser._id,
-          nombreCompleto: finalUser.nombre_completo || finalUser.nombre,
-          correo: finalUser.correo_electronico || finalUser.email,
-          rol: finalUser.rol,
-          secretaría: finalUser.secretaría || finalUser.secretaria,
-          lineaTrabajo: finalUser.linea_trabajo,
-          token: "session_" + Math.random().toString(36).substr(2),
-          estado: finalUser.estado || 'Activo'
+          id: String(finalUser._id),
+          nombreCompleto: String(finalUser.nombre_completo || finalUser.nombre || ""),
+          correo: String(finalUser.correo_electronico || finalUser.email || ""),
+          rol: String(finalUser.rol || ""),
+          secretaría: String(finalUser.secretaría || finalUser.secretaria || ""),
+          lineaTrabajo: String(finalUser.linea_trabajo || ""),
+          token: "session_" + Math.random().toString(36).substring(2),
+          estado: String(finalUser.estado || 'Activo')
         };
-        console.log('Response object:', responseObj);
-        return res.json(responseObj);
+        
+        // Ensure we explicitly set headers and send a string if needed to avoid express issues
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(200).send(JSON.stringify(responseObj));
       }
       
-      res.status(401).json({ error: "Credenciales inválidas" });
+      return res.status(401).json({ error: "Credenciales inválidas" });
     } catch (error: any) {
       console.error("Login route error:", error);
-      res.status(500).json({ error: "Error en el servidor", message: error.message, stack: error.stack });
+      return res.status(500).json({ error: "Error en el servidor", message: error.message });
     }
   });
 

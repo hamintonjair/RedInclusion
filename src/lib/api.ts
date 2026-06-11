@@ -1,8 +1,18 @@
 import axios from 'axios';
 import { saveOfflineRequest, cacheResponse, getCachedResponse } from './offlineSync';
 
+const getBaseURL = () => {
+  // If we are in a mobile/native app (Capacitor)
+  if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+    // Return the production URL of the backend
+    return 'https://ais-pre-2lhgcb7gzapttpghvspaia-736890033354.us-east1.run.app/api';
+  }
+  // Otherwise use relative path for web
+  return '/api';
+};
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },

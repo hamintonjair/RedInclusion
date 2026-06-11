@@ -56,8 +56,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('Attempting login for:', email);
     try {
       const response = await api.post('/auth/login', { email, password: pass });
-      console.log('Login API response:', response);
-      const userData = response.data;
+      console.log('Login API response structure:', {
+        status: response.status,
+        dataType: typeof response.data,
+        dataLength: response.data?.length,
+        data: response.data
+      });
+      
+      let userData = response.data;
+      
+      // If for some reason axios didn't parse it but it's a string
+      if (typeof userData === 'string' && userData.trim().length > 0) {
+        try {
+          userData = JSON.parse(userData);
+        } catch (e) {
+          console.error('Failed to parse userData string:', e);
+        }
+      }
       
       if (userData && typeof userData === 'object' && userData.id) {
         setUser(userData);
@@ -65,12 +80,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
         return true;
       } else {
-        console.error('Invalid user data received:', userData);
+        console.error('Invalid user data received (not an object or missing id):', userData);
         setIsLoading(false);
         return false;
       }
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (error: any) {
+      console.error('Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       setIsLoading(false);
       return false;
     }
