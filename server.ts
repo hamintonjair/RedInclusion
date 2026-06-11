@@ -16,22 +16,6 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Debug middleware to log all requests
-  app.use((req, res, next) => {
-    const start = Date.now();
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    
-    // Capture original send
-    const originalSend = res.send;
-    res.send = function(body) {
-      const duration = Date.now() - start;
-      console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Status: ${res.statusCode} - Duration: ${duration}ms - Body Length: ${body ? (typeof body === 'string' ? body.length : 'buffer') : 0}`);
-      return originalSend.call(this, body);
-    };
-    
-    next();
-  });
-
   // Connection to MongoDB
   const mongoUri = process.env.MONGODB_URI;
   let db: any = null;
@@ -126,10 +110,9 @@ async function startServer() {
           estado: String(finalUser.estado || 'Activo')
         };
         
-        console.log('Login success! Sending:', JSON.stringify(responseObj));
+        console.log('Login success! Sending response');
         res.setHeader('X-Debug4-Success', 'Yes');
-        res.type('application/json');
-        return res.status(200).send(JSON.stringify(responseObj));
+        return res.json(responseObj);
       }
       
       console.log('Login failed: User not found');
@@ -1583,6 +1566,12 @@ async function startServer() {
       console.error("Error al eliminar asistente:", error);
       res.status(500).json({ error: "Error al eliminar asistente" });
     }
+  });
+
+  // 404 handler for API routes
+  app.all("/api/*", (req, res) => {
+    console.log(`[404 API] ${req.method} ${req.url} - No route matched`);
+    res.status(404).json({ error: "API Route not found", method: req.method, url: req.url });
   });
 
   // 404 handler for API routes

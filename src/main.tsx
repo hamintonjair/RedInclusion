@@ -5,9 +5,15 @@ import App from './App.tsx';
 import './index.css';
 import { registerSW } from 'virtual:pwa-register';
 
-if ('serviceWorker' in navigator && false) { // Temporarily disabled
-  registerSW({ immediate: true });
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (const registration of registrations) {
+      registration.unregister();
+      console.log('Service Worker unregistered');
+    }
+  });
 }
+// registerSW({ immediate: true }); // Disabled permanently
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

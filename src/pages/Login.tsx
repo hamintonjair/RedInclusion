@@ -163,6 +163,9 @@ export const Login: React.FC = () => {
                 {isLoading ? <Loader2 className="animate-spin" size={24} /> : 'Iniciar Sesión'}
               </button>
             </form>
+            <div className="mt-8 text-center">
+              <span className="text-[10px] text-slate-400 font-mono">v1.2.1-debug-prod</span>
+            </div>
           </div>
         </motion.div>
       </div>

@@ -58,11 +58,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.post('/auth/login', { email, password: pass }, {
         headers: { 'X-Auth-Request': 'true' }
       });
-      console.log('Login API response FULL:', {
+      console.log('Login API FULL Debug:', {
         status: response.status,
-        headers: response.headers,
-        data: response.data,
-        dataType: typeof response.data
+        debugHeaders: Object.fromEntries(
+          Object.entries(response.headers).filter(([k]) => k.toLowerCase().startsWith('x-debug'))
+        ),
+        dataType: typeof response.data,
+        data: response.data
       });
       
       let userData = response.data;
