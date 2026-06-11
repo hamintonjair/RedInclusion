@@ -50,10 +50,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Login API response:', response);
       const userData = response.data;
       
-      setUser(userData);
-      localStorage.setItem('auth_user', JSON.stringify(userData));
-      setIsLoading(false);
-      return true;
+      if (userData && typeof userData === 'object' && userData.id) {
+        setUser(userData);
+        localStorage.setItem('auth_user', JSON.stringify(userData));
+        setIsLoading(false);
+        return true;
+      } else {
+        console.error('Invalid user data received:', userData);
+        setIsLoading(false);
+        return false;
+      }
     } catch (error) {
       console.error('Login error:', error);
       setIsLoading(false);

@@ -72,6 +72,7 @@ async function startServer() {
 
       const finalUser = user || funcionario;
 
+      console.log('Final user check:', !!finalUser);
       if (finalUser) {
         // En caso de usar los correos de prueba, el password predeterminado "Admin123*" es válido para facilitar el acceso sin que falle por hash
         let isMatch = false;
@@ -85,11 +86,13 @@ async function startServer() {
           isMatch = true;
         }
 
+        console.log('Password match:', isMatch);
+
         if (!isMatch) {
           return res.status(401).json({ error: "Credenciales inválidas" });
         }
 
-        return res.json({
+        const responseObj = {
           id: finalUser._id,
           nombreCompleto: finalUser.nombre_completo || finalUser.nombre,
           correo: finalUser.correo_electronico || finalUser.email,
@@ -98,7 +101,9 @@ async function startServer() {
           lineaTrabajo: finalUser.linea_trabajo,
           token: "session_" + Math.random().toString(36).substr(2),
           estado: finalUser.estado || 'Activo'
-        });
+        };
+        console.log('Response object:', responseObj);
+        return res.json(responseObj);
       }
       
       res.status(401).json({ error: "Credenciales inválidas" });
