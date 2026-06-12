@@ -46,6 +46,14 @@ async function startServer() {
     });
   });
 
+  // Auth API redirect for stale FE clients
+  app.post("/api/auth/login", (req, res) => {
+    console.log('[REDIRECT] Stale client hit /api/auth/login, redirecting to /api/v2/login');
+    // Using a simple forward instead of 307 because some clients might not like 307 POST
+    req.url = '/api/v2/login';
+    return (app as any)._router.handle(req, res, () => {});
+  });
+
   // Auth API v2
   app.post("/api/v2/login", async (req, res) => {
     console.log('[LOGIN-V2] Request received for:', req.body?.email);

@@ -17,6 +17,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log('[AUTH-VERSION] Initialized v2.0.3-Fix');
     const stored = localStorage.getItem('auth_user');
     console.log('Stored user in localStorage:', stored);
     if (stored) {
