@@ -46,66 +46,65 @@ async function startServer() {
     });
   });
 
-  // Auth API redirect for stale FE clients
-  app.post("/api/auth/login", (req, res) => {
-    console.log('[REDIRECT] Stale client hit /api/auth/login, redirecting to /api/v2/login');
-    // Using a simple forward instead of 307 because some clients might not like 307 POST
-    req.url = '/api/v2/login';
-    return (app as any)._router.handle(req, res, () => {});
-  });
-
-  // Auth API v2
-  app.post("/api/v2/login", async (req, res) => {
-    console.log('[LOGIN-V2] Request received for:', req.body?.email);
+  // Unified Auth Handler
+  const handleLogin = async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    console.log(`[AUTH-CORE] Login attempt: ${email} from ${clientIp}`);
     
     if (!db) {
-      console.log('[LOGIN-V2] DB not connected');
-      return res.status(503).json({ error: "Servidor en mantenimiento (DB)" });
+      console.error('[AUTH-CORE] Database not initialized');
+      return res.status(503).json({ error: "Servicio no disponible: DB desconectada" });
     }
 
     try {
-      console.log('[LOGIN-V2] Searching user:', email);
-      let user = await db.collection('usuarios').findOne({ correo_electronico: email });
-      let funcionario = !user ? await db.collection('funcionarios').findOne({ email: email }) : null;
+      const usersCol = db.collection('usuarios');
+      const staffCol = db.collection('funcionarios');
+      
+      let user = await usersCol.findOne({ correo_electronico: email });
+      let funcionario = !user ? await staffCol.findOne({ email: email }) : null;
       
       const finalUser = user || funcionario;
 
-      if (finalUser) {
-        let isMatch = false;
-        if (finalUser.password_hash) {
-          isMatch = await bcrypt.compare(String(password), String(finalUser.password_hash));
-        } else if (password === 'Admin123*') { 
-          isMatch = true;
-        }
-
-        if (!isMatch) {
-          console.log('[LOGIN-V2] Password mismatch');
-          return res.status(401).json({ error: "Contraseña incorrecta" });
-        }
-
-        const responseObj = {
-          id: String(finalUser._id),
-          nombreCompleto: String(finalUser.nombre_completo || finalUser.nombre || "Usuario"),
-          correo: String(finalUser.correo_electronico || finalUser.email || ""),
-          rol: String(finalUser.rol || "funcionario"),
-          token: "v2_" + Math.random().toString(36).substring(2),
-          debug: "v2-active"
-        };
-        
-        console.log('[LOGIN-V2] Success! Sending response:', JSON.stringify(responseObj));
-        res.setHeader('X-App-Version', '2.0.2-final');
-        res.setHeader('Content-Type', 'application/json');
-        return res.status(200).json(responseObj);
+      if (!finalUser) {
+        console.log(`[AUTH-CORE] User not found: ${email}`);
+        return res.status(401).json({ error: "Usuario no encontrado" });
       }
+
+      let isMatch = false;
+      if (finalUser.password_hash) {
+        isMatch = await bcrypt.compare(String(password), String(finalUser.password_hash));
+      } else if (password === 'Admin123*') { 
+        isMatch = true;
+      }
+
+      if (!isMatch) {
+        console.log(`[AUTH-CORE] Password mismatch for: ${email}`);
+        return res.status(401).json({ error: "Credenciales inválidas" });
+      }
+
+      const responseObj = {
+        id: String(finalUser._id),
+        nombreCompleto: String(finalUser.nombre_completo || finalUser.nombre || "Usuario"),
+        correo: String(finalUser.correo_electronico || finalUser.email || ""),
+        rol: String(finalUser.rol || "funcionario"),
+        token: "session_" + Math.random().toString(36).substring(2),
+        v: "2.0.4-unified"
+      };
       
-      console.log('[LOGIN-V2] User not found');
-      return res.status(401).json({ error: "Usuario no encontrado" });
+      console.log(`[AUTH-CORE] Login success for: ${email}`);
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(200).json(responseObj);
     } catch (error: any) {
-      console.error("[LOGIN-V2] Error:", error);
-      return res.status(500).json({ error: "Error interno" });
+      console.error("[AUTH-CORE] Critical Error:", error);
+      return res.status(500).json({ error: "Error interno del servidor", detail: error.message });
     }
-  });
+  };
+
+  // Compatibility routes
+  app.post("/api/auth/login", handleLogin);
+  app.post("/api/v2/login", handleLogin);
 
   // Test API
   app.get("/api/test", (req, res) => {
