@@ -56,8 +56,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     console.log('[AUTH-V3-FIX] Attempting Login V2 at /api/v2/login for:', email);
     try {
-      const response = await api.post('/v2/login', { email, password: pass });
-      console.log('[AUTH-V3-FIX] Response received:', response.status, response.data);
+      const response = await api.post('/v2/login', { email, password: pass }, {
+        // Cache bypass for login
+        headers: { 'X-Force-Login': Date.now().toString() }
+      });
+      console.log('[AUTH-SYNC-CORE] Response Raw:', response);
       const userData = response.data;
       
       if (userData && typeof userData === 'object' && userData.id) {

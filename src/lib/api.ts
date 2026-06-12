@@ -9,11 +9,21 @@ const api = axios.create({
   baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
+    'X-App-Version': '2.0.4-Sync',
   },
 });
 
 // Request Interceptor
 api.interceptors.request.use((config) => {
+  // Force no-cache on all requests
+  config.headers['Cache-Control'] = 'no-cache';
+  config.headers['Pragma'] = 'no-cache';
+  config.headers['Expires'] = '0';
+  
+  // Add timestamp to query to bust intermediate caches (only for GET)
+  if (config.method?.toUpperCase() === 'GET') {
+    config.params = { ...config.params, _v: Date.now() };
+  }
   const userStr = localStorage.getItem('auth_user');
   if (userStr) {
     const user = JSON.parse(userStr);

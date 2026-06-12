@@ -9,31 +9,7 @@ export default defineConfig(() => {
     plugins: [
       react(), 
       tailwindcss(),
-      /* VitePWA({
-        registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'logo.png', 'logo.svg'],
-        workbox: {
-          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        },
-        manifest: {
-          name: 'Red de Inclusión Quibdó',
-          short_name: 'InclusiónQBD',
-          description: 'Plataforma de gestión para la Red de Inclusión de Quibdó',
-          theme_color: '#ffffff',
-          icons: [
-            {
-              src: 'logo.png',
-              sizes: '192x192',
-              type: 'image/png'
-            },
-            {
-              src: 'logo.png',
-              sizes: '512x512',
-              type: 'image/png'
-            }
-          ]
-        }
-      }) */
+      // VitePWA is removed to prevent cache issues
     ],
     resolve: {
       alias: {
