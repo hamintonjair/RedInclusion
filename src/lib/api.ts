@@ -1,29 +1,15 @@
 import axios from 'axios';
 import { saveOfflineRequest, cacheResponse, getCachedResponse } from './offlineSync';
 
-const getBaseURL = () => {
-  return '/api';
-};
-
 const api = axios.create({
-  baseURL: getBaseURL(),
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
-    'X-App-Version': '2.0.4-Sync',
   },
 });
 
 // Request Interceptor
 api.interceptors.request.use((config) => {
-  // Force no-cache on all requests
-  config.headers['Cache-Control'] = 'no-cache';
-  config.headers['Pragma'] = 'no-cache';
-  config.headers['Expires'] = '0';
-  
-  // Add timestamp to query to bust intermediate caches (only for GET)
-  if (config.method?.toUpperCase() === 'GET') {
-    config.params = { ...config.params, _v: Date.now() };
-  }
   const userStr = localStorage.getItem('auth_user');
   if (userStr) {
     const user = JSON.parse(userStr);
@@ -37,10 +23,6 @@ api.interceptors.request.use((config) => {
 // Intercept Axios to handle offline gracefully
 api.interceptors.response.use(
   (response) => {
-    console.log(`API Success Interceptor: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-      status: response.status,
-      hasData: !!response.data
-    });
     // If it's a GET request, cache the response
     if (response.config.method?.toUpperCase() === 'GET' && response.config.url) {
       const cacheUrl = response.config.url + (response.config.params ? JSON.stringify(response.config.params) : '');

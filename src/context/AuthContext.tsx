@@ -17,64 +17,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    console.log('[AUTH-VERSION] Initialized v2.0.4-Sync');
     const stored = localStorage.getItem('auth_user');
-    console.log('Stored user in localStorage:', stored);
     if (stored) {
-      try {
-        const parsedUser = JSON.parse(stored);
-        console.log('Parsed user:', parsedUser);
-        setUser(parsedUser);
-        
-        // Fetch fresh, real data of the user/funcionario from database
-        const fetchFreshProfile = async () => {
-          try {
-            const userId = parsedUser.id || parsedUser._id;
-            console.log('UserId to fetch profile:', userId);
-            if (userId) {
-              const res = await api.get(`/auth/profile?id=${userId}`);
-              console.log('Profile fetch response:', res.data);
-              if (res.data) {
-                setUser(res.data);
-                localStorage.setItem('auth_user', JSON.stringify(res.data));
-              }
+      const parsedUser = JSON.parse(stored);
+      setUser(parsedUser);
+      
+      // Fetch fresh, real data of the user/funcionario from database
+      const fetchFreshProfile = async () => {
+        try {
+          const userId = parsedUser.id || parsedUser._id;
+          if (userId) {
+            const res = await api.get(`/auth/profile?id=${userId}`);
+            if (res.data) {
+              setUser(res.data);
+              localStorage.setItem('auth_user', JSON.stringify(res.data));
             }
-          } catch (err) {
-            console.error('No se pudo refrescar el perfil real desde la base de datos:', err);
           }
-        };
-        fetchFreshProfile();
-      } catch (e) {
-        console.error('Error parsing stored user:', e);
-        localStorage.removeItem('auth_user');
-      }
+        } catch (err) {
+          console.error('No se pudo refrescar el perfil real desde la base de datos:', err);
+        }
+      };
+      fetchFreshProfile();
     }
     setIsLoading(false);
   }, []);
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
-    console.log('[AUTH-V3-FIX] Attempting Login V2 at /api/v2/login for:', email);
     try {
-      const response = await api.post('/v2/login', { email, password: pass }, {
-        // Cache bypass for login
-        headers: { 'X-Force-Login': Date.now().toString() }
-      });
-      console.log('[AUTH-SYNC-CORE] Response Raw:', response);
+      const response = await api.post('/auth/login', { email, password: pass });
       const userData = response.data;
       
-      if (userData && typeof userData === 'object' && userData.id) {
-        setUser(userData);
-        localStorage.setItem('auth_user', JSON.stringify(userData));
-        setIsLoading(false);
-        return true;
-      } else {
-        console.error('[AUTH] Invalid user data received:', userData);
-        setIsLoading(false);
-        return false;
-      }
-    } catch (error: any) {
-      console.error('[AUTH] Login error:', error.message);
+      setUser(userData);
+      localStorage.setItem('auth_user', JSON.stringify(userData));
+      setIsLoading(false);
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
       setIsLoading(false);
       return false;
     }

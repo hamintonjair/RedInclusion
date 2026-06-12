@@ -14,7 +14,6 @@ export const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login form submitted:', { email });
     setError('');
     
     if (!email.trim() || !password) {
@@ -23,7 +22,6 @@ export const Login: React.FC = () => {
     }
 
     const success = await login(email.trim(), password);
-    console.log('Login result:', success);
     if (success) {
       const from = (location.state as any)?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
@@ -163,26 +161,6 @@ export const Login: React.FC = () => {
                 {isLoading ? <Loader2 className="animate-spin" size={24} /> : 'Iniciar Sesión'}
               </button>
             </form>
-            <div className="mt-8 flex flex-col items-center gap-2">
-              <span className="text-[10px] text-slate-400 font-mono">v2.0.4-Sync-Final</span>
-              <button 
-                type="button"
-                onClick={() => {
-                  localStorage.clear();
-                  if ('caches' in window) {
-                    caches.keys().then(names => {
-                      for (const name of names) {
-                        caches.delete(name);
-                      }
-                    });
-                  }
-                  window.location.href = window.location.origin + '?v=' + Date.now();
-                }}
-                className="text-[10px] text-[#0066cc] underline cursor-pointer hover:text-[#00a859]"
-              >
-                Limpiar Cache y Forzar Actualización
-              </button>
-            </div>
           </div>
         </motion.div>
       </div>
