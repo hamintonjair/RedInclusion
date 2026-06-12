@@ -164,7 +164,7 @@ export const Login: React.FC = () => {
               </button>
             </form>
             <div className="mt-8 text-center">
-              <span className="text-[10px] text-slate-400 font-mono">v1.2.1-debug-prod</span>
+              <span className="text-[10px] text-slate-400 font-mono">v2.0.0-final-fix</span>
             </div>
           </div>
         </motion.div>

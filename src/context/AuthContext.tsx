@@ -53,30 +53,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
-    console.log('Attempting login for:', email, 'to URL:', api.defaults.baseURL + '/auth/login');
+    console.log('[AUTH] Attempting Login V2...');
     try {
-      const response = await api.post('/auth/login', { email, password: pass }, {
-        headers: { 'X-Auth-Request': 'true' }
-      });
-      
-      console.log('--- LOGIN RESPONSE START ---');
-      console.log('Status:', response.status);
-      console.log('StatusText:', response.statusText);
-      console.log('Headers:', response.headers);
-      console.log('Data Type:', typeof response.data);
-      console.log('Data (raw):', response.data);
-      console.log('--- LOGIN RESPONSE END ---');
-      
-      let userData = response.data;
-      
-      // If for some reason axios didn't parse it but it's a string
-      if (typeof userData === 'string' && userData.trim().length > 0) {
-        try {
-          userData = JSON.parse(userData);
-        } catch (e) {
-          console.error('Failed to parse userData string:', e);
-        }
-      }
+      const response = await api.post('/v2/login', { email, password: pass });
+      const userData = response.data;
       
       if (userData && typeof userData === 'object' && userData.id) {
         setUser(userData);
@@ -84,16 +64,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
         return true;
       } else {
-        console.error('Invalid user data received (not an object or missing id):', userData);
+        console.error('[AUTH] Invalid user data received:', userData);
         setIsLoading(false);
         return false;
       }
     } catch (error: any) {
-      console.error('Login error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+      console.error('[AUTH] Login error:', error.message);
       setIsLoading(false);
       return false;
     }

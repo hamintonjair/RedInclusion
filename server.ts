@@ -46,63 +46,34 @@ async function startServer() {
     });
   });
 
-  // Auth API
-  app.post("/api/auth/login", async (req, res) => {
-    res.setHeader('X-Debug0-Reached', 'Yes');
-    console.log('Login Request Body:', JSON.stringify(req.body));
+  // Auth API v2
+  app.post("/api/v2/login", async (req, res) => {
+    console.log('[LOGIN-V2] Request received for:', req.body?.email);
     const { email, password } = req.body;
     
     if (!db) {
-      console.log('DB not available');
-      if (email === "admin@quibdo.gov.co" && password === "Admin123*") {
-        return res.json({
-          id: "1",
-          nombreCompleto: "Administrador (Offline Mode)",
-          correo: email,
-          rol: "admin",
-          token: "mock_jwt_token"
-        });
-      }
-      return res.status(503).json({ error: "Base de datos no disponible" });
+      console.log('[LOGIN-V2] DB not connected');
+      return res.status(503).json({ error: "Servidor en mantenimiento (DB)" });
     }
 
     try {
-      res.setHeader('X-Debug1-Searching', 'Yes');
-      // Intentar buscar en usuarios o funcionarios
-      console.log('Searching for email:', email);
+      console.log('[LOGIN-V2] Searching user:', email);
       let user = await db.collection('usuarios').findOne({ correo_electronico: email });
       let funcionario = !user ? await db.collection('funcionarios').findOne({ email: email }) : null;
       
-      if (!user && !funcionario) {
-        console.log('No direct user/funcionario found, checking testing aliases');
-        if (email === "admin@quibdo.gov.co") {
-          funcionario = await db.collection('funcionarios').findOne({ rol: "admin" });
-        } else if (email === "funcionario@quibdo.gov.co") {
-          funcionario = await db.collection('funcionarios').findOne({ rol: "funcionario" });
-        }
-      }
-
       const finalUser = user || funcionario;
-      console.log('User found:', !!finalUser);
 
       if (finalUser) {
-        res.setHeader('X-Debug2-UserFound', 'Yes');
         let isMatch = false;
         if (finalUser.password_hash) {
-          if ((email === "admin@quibdo.gov.co" || email === "funcionario@quibdo.gov.co") && password === "Admin123*") {
-            isMatch = true;
-          } else {
-            isMatch = await bcrypt.compare(String(password), String(finalUser.password_hash));
-          }
+          isMatch = await bcrypt.compare(String(password), String(finalUser.password_hash));
         } else if (password === 'Admin123*') { 
           isMatch = true;
         }
 
-        console.log('Password Match:', isMatch);
-
         if (!isMatch) {
-          res.setHeader('X-Debug3-PassFail', 'Yes');
-          return res.status(401).json({ error: "Credenciales inválidas" });
+          console.log('[LOGIN-V2] Password mismatch');
+          return res.status(401).json({ error: "Contraseña incorrecta" });
         }
 
         const responseObj = {
@@ -110,32 +81,26 @@ async function startServer() {
           nombreCompleto: String(finalUser.nombre_completo || finalUser.nombre || "Usuario"),
           correo: String(finalUser.correo_electronico || finalUser.email || ""),
           rol: String(finalUser.rol || "funcionario"),
-          secretaría: String(finalUser.secretaría || finalUser.secretaria || ""),
-          lineaTrabajo: String(finalUser.linea_trabajo || ""),
-          token: "session_" + Math.random().toString(36).substring(2),
-          estado: String(finalUser.estado || 'Activo'),
-          debug_info: "prod-v3"
+          token: "v2_" + Math.random().toString(36).substring(2),
+          debug: "v2-active"
         };
         
-        console.log('Login successful for:', responseObj.correo);
-        res.setHeader('X-Debug-Final', 'Success');
-        res.status(200);
-        return res.json(responseObj);
+        console.log('[LOGIN-V2] Login success, sending JSON');
+        return res.status(200).json(responseObj);
       }
       
-      console.log('Login failed: User not found');
-      res.setHeader('X-Debug5-NotFound', 'Yes');
-      return res.status(401).json({ error: "Credenciales inválidas" });
+      console.log('[LOGIN-V2] User not found');
+      return res.status(401).json({ error: "Usuario no encontrado" });
     } catch (error: any) {
-      console.error("Login route error:", error);
-      res.setHeader('X-Debug6-Error', error.message);
-      return res.status(500).json({ error: "Error en el servidor", message: error.message });
+      console.error("[LOGIN-V2] Error:", error);
+      return res.status(500).json({ error: "Error interno" });
     }
   });
 
   // Test API
   app.get("/api/test", (req, res) => {
-    res.json({ message: "API is working", time: new Date().toISOString() });
+    console.log('[TEST] Health check called');
+    res.json({ message: "API V2 is live", time: new Date().toISOString(), db: !!db });
   });
 
   // Profile Get API
