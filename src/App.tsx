@@ -91,7 +91,7 @@ export default function App() {
           <Route 
             path="/actividades" 
             element={
-              <ProtectedRoute allowedRoles={['funcionario']}>
+              <ProtectedRoute allowedRoles={['admin', 'funcionario']}>
                 <Actividades />
               </ProtectedRoute>
             } 
@@ -99,7 +99,7 @@ export default function App() {
           <Route 
             path="/asistentes" 
             element={
-              <ProtectedRoute allowedRoles={['funcionario']}>
+              <ProtectedRoute allowedRoles={['admin', 'funcionario']}>
                 <Asistentes />
               </ProtectedRoute>
             } 
