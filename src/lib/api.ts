@@ -2,7 +2,9 @@ import axios from 'axios';
 import { saveOfflineRequest, cacheResponse, getCachedResponse } from './offlineSync';
 
 const getBaseURL = () => {
-  return 'https://ais-pre-2lhgcb7gzapttpghvspaia-736890033354.us-east1.run.app/api';
+  // Use a same-origin API path by default to avoid browser CORS issues when
+  // the app is served together with its Express backend.
+  return import.meta.env.VITE_API_BASE_URL || '/api';
 };
 
 const api = axios.create({

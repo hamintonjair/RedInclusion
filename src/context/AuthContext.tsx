@@ -6,7 +6,7 @@ interface AuthContextType {
   user: Usuario | null;
   login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
-  updateUser: (updatedFields: Partial<Usuario>) => void;
+  updateUser: (updatedFields: Partial<Usuario>) => Promise<void>;
   isLoading: boolean;
 }
 
