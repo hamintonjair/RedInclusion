@@ -47,17 +47,17 @@ async function startServer() {
   });
 
   // Auth API v2
-  app.post("/api/v2/login", async (req, res) => {
-    console.log('[LOGIN-V2] Request received for:', req.body?.email);
+  const handleLoginRequest = async (req: any, res: any) => {
+    console.log('[LOGIN] Request received for:', req.body?.email, 'path:', req.path);
     const { email, password } = req.body;
     
     if (!db) {
-      console.log('[LOGIN-V2] DB not connected');
+      console.log('[LOGIN] DB not connected');
       return res.status(503).json({ error: "Servidor en mantenimiento (DB)" });
     }
 
     try {
-      console.log('[LOGIN-V2] Searching user:', email);
+      console.log('[LOGIN] Searching user:', email);
       let user = await db.collection('usuarios').findOne({ correo_electronico: email });
       let funcionario = !user ? await db.collection('funcionarios').findOne({ email: email }) : null;
       
@@ -72,7 +72,7 @@ async function startServer() {
         }
 
         if (!isMatch) {
-          console.log('[LOGIN-V2] Password mismatch');
+          console.log('[LOGIN] Password mismatch');
           return res.status(401).json({ error: "Contraseña incorrecta" });
         }
 
@@ -85,17 +85,21 @@ async function startServer() {
           debug: "v2-active"
         };
         
-        console.log('[LOGIN-V2] Login success, sending JSON');
+        console.log('[LOGIN] Login success, sending JSON');
         return res.status(200).json(responseObj);
       }
       
-      console.log('[LOGIN-V2] User not found');
+      console.log('[LOGIN] User not found');
       return res.status(401).json({ error: "Usuario no encontrado" });
     } catch (error: any) {
-      console.error("[LOGIN-V2] Error:", error);
+      console.error("[LOGIN] Error:", error);
       return res.status(500).json({ error: "Error interno" });
     }
-  });
+  };
+
+  app.post("/api/v2/login", handleLoginRequest);
+  app.post("/api/auth/login", handleLoginRequest);
+  app.post("/auth/login", handleLoginRequest);
 
   // Test API
   app.get("/api/test", (req, res) => {

@@ -53,23 +53,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
-    console.log('[AUTH] Attempting Login V2...');
+    console.log('[AUTH] Attempting login for:', email);
+
+    const parseUserData = (data: any) => {
+      if (!data) return null;
+      if (typeof data === 'string') {
+        try {
+          return JSON.parse(data);
+        } catch {
+          return null;
+        }
+      }
+      return data;
+    };
+
+    const isValidUser = (userData: any) => {
+      return userData && typeof userData === 'object' && (userData.id || userData._id);
+    };
+
+    const normalizeUser = (userData: any) => ({
+      id: String(userData.id || userData._id),
+      nombreCompleto: userData.nombreCompleto || userData.nombre || 'Usuario',
+      correo: userData.correo || userData.email || '',
+      rol: userData.rol || 'funcionario',
+      estado: userData.estado || 'Activo',
+      lineaTrabajo: userData.lineaTrabajo || userData.linea_trabajo,
+      secretaría: userData.secretaría || userData.secretaria,
+      token: userData.token,
+    });
+
     try {
-      const response = await api.post('/v2/login', { email, password: pass });
-      const userData = response.data;
-      
-      if (userData && typeof userData === 'object' && userData.id) {
-        setUser(userData);
-        localStorage.setItem('auth_user', JSON.stringify(userData));
+      const endpoints = ['/v2/login', '/auth/login', '/api/auth/login'];
+      let response: any;
+      let userData: any = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          console.log('[AUTH] Trying endpoint:', endpoint);
+          response = await api.post(endpoint, { email, password: pass });
+          userData = parseUserData(response?.data);
+          console.log('[AUTH] Login response from', endpoint, { status: response?.status, data: userData });
+          if (isValidUser(userData)) break;
+        } catch (err: any) {
+          console.warn('[AUTH] Endpoint failed:', endpoint, err?.message || err);
+          continue;
+        }
+      }
+
+      if (isValidUser(userData)) {
+        const normalizedUser = normalizeUser(userData);
+        setUser(normalizedUser);
+        localStorage.setItem('auth_user', JSON.stringify(normalizedUser));
         setIsLoading(false);
         return true;
-      } else {
-        console.error('[AUTH] Invalid user data received:', userData);
-        setIsLoading(false);
-        return false;
       }
+
+      console.error('[AUTH] Invalid user data received:', userData);
+      setIsLoading(false);
+      return false;
     } catch (error: any) {
-      console.error('[AUTH] Login error:', error.message);
+      console.error('[AUTH] Login error:', error?.message || error);
       setIsLoading(false);
       return false;
     }
