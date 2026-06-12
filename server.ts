@@ -16,6 +16,12 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Global Logger - VERY IMPORTANT for debugging
+  app.use((req, res, next) => {
+    console.log(`[SERVER-LOG] ${req.method} ${req.url} - Body:`, JSON.stringify(req.body));
+    next();
+  });
+
   // Connection to MongoDB
   const mongoUri = process.env.MONGODB_URI;
   let db: any = null;
@@ -101,17 +107,19 @@ async function startServer() {
 
         const responseObj = {
           id: String(finalUser._id),
-          nombreCompleto: String(finalUser.nombre_completo || finalUser.nombre || ""),
+          nombreCompleto: String(finalUser.nombre_completo || finalUser.nombre || "Usuario"),
           correo: String(finalUser.correo_electronico || finalUser.email || ""),
-          rol: String(finalUser.rol || ""),
+          rol: String(finalUser.rol || "funcionario"),
           secretaría: String(finalUser.secretaría || finalUser.secretaria || ""),
           lineaTrabajo: String(finalUser.linea_trabajo || ""),
           token: "session_" + Math.random().toString(36).substring(2),
-          estado: String(finalUser.estado || 'Activo')
+          estado: String(finalUser.estado || 'Activo'),
+          debug_info: "prod-v3"
         };
         
-        console.log('Login success! Sending response');
-        res.setHeader('X-Debug4-Success', 'Yes');
+        console.log('Login successful for:', responseObj.correo);
+        res.setHeader('X-Debug-Final', 'Success');
+        res.status(200);
         return res.json(responseObj);
       }
       

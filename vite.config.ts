@@ -9,7 +9,7 @@ export default defineConfig(() => {
     plugins: [
       react(), 
       tailwindcss(),
-      VitePWA({
+      /* VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'logo.png', 'logo.svg'],
         workbox: {
@@ -33,7 +33,7 @@ export default defineConfig(() => {
             }
           ]
         }
-      })
+      }) */
     ],
     resolve: {
       alias: {
