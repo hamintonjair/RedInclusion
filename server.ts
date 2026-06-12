@@ -85,7 +85,9 @@ async function startServer() {
           debug: "v2-active"
         };
         
-        console.log('[LOGIN-V2] Login success, sending JSON');
+        console.log('[LOGIN-V2] Success! Sending response:', JSON.stringify(responseObj));
+        res.setHeader('X-App-Version', '2.0.2-final');
+        res.setHeader('Content-Type', 'application/json');
         return res.status(200).json(responseObj);
       }
       
@@ -100,7 +102,8 @@ async function startServer() {
   // Test API
   app.get("/api/test", (req, res) => {
     console.log('[TEST] Health check called');
-    res.json({ message: "API V2 is live", time: new Date().toISOString(), db: !!db });
+    res.setHeader('X-App-Version', '2.0.2-final');
+    res.json({ message: "API V2 is live", version: "2.0.2-final", time: new Date().toISOString(), db: !!db });
   });
 
   // Profile Get API
@@ -1539,12 +1542,6 @@ async function startServer() {
       console.error("Error al eliminar asistente:", error);
       res.status(500).json({ error: "Error al eliminar asistente" });
     }
-  });
-
-  // 404 handler for API routes
-  app.all("/api/*", (req, res) => {
-    console.log(`[404 API] ${req.method} ${req.url} - No route matched`);
-    res.status(404).json({ error: "API Route not found", method: req.method, url: req.url });
   });
 
   // 404 handler for API routes
