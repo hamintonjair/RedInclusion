@@ -30,9 +30,11 @@ var import_bcryptjs = __toESM(require("bcryptjs"), 1);
 var import_dotenv = __toESM(require("dotenv"), 1);
 import_dotenv.default.config();
 async function startServer() {
+  console.log("Starting server... NODE_ENV:", process.env.NODE_ENV);
   const app = (0, import_express.default)();
   const PORT = 3e3;
   app.use(import_express.default.json());
+  app.use(import_express.default.urlencoded({ extended: true }));
   const mongoUri = process.env.MONGODB_URI;
   let db = null;
   if (mongoUri) {
@@ -53,9 +55,16 @@ async function startServer() {
     });
   });
   app.post("/api/auth/login", async (req, res) => {
-    const { email, password } = req.body;
+    console.log("Login request received:", { email: req.body?.email });
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      console.warn("Login attempt missing email or password");
+      return res.status(400).json({ error: "Correo y contrase\xF1a son requeridos" });
+    }
     if (!db) {
+      console.log("Database not connected, checking offline credentials...");
       if (email === "admin@quibdo.gov.co" && password === "Admin123*") {
+        console.log("Offline login successful for admin");
         return res.json({
           id: "1",
           nombreCompleto: "Administrador (Offline Mode)",
@@ -64,48 +73,65 @@ async function startServer() {
           token: "mock_jwt_token"
         });
       }
-      return res.status(503).json({ error: "Base de datos no disponible" });
+      console.warn("Database not connected and credentials don't match offline admin");
+      return res.status(503).json({ error: "Base de datos no disponible y credenciales no v\xE1lidas para modo offline" });
     }
     try {
+      console.log("Searching for user in database:", email);
       let user = await db.collection("usuarios").findOne({ correo_electronico: email });
       let funcionario = !user ? await db.collection("funcionarios").findOne({ email }) : null;
       if (!user && !funcionario) {
         if (email === "admin@quibdo.gov.co") {
+          console.log("Attempting fallback for admin test email");
           funcionario = await db.collection("funcionarios").findOne({ rol: "admin" });
         } else if (email === "funcionario@quibdo.gov.co") {
+          console.log("Attempting fallback for funcionario test email");
           funcionario = await db.collection("funcionarios").findOne({ rol: "funcionario" });
         }
       }
       const finalUser = user || funcionario;
       if (finalUser) {
+        console.log("User found in database:", {
+          id: finalUser._id,
+          email: finalUser.correo_electronico || finalUser.email,
+          hasHash: !!finalUser.password_hash
+        });
         let isMatch = false;
-        if (finalUser.password_hash) {
-          if ((email === "admin@quibdo.gov.co" || email === "funcionario@quibdo.gov.co") && password === "Admin123*") {
-            isMatch = true;
-          } else {
-            isMatch = await import_bcryptjs.default.compare(String(password), String(finalUser.password_hash));
-          }
-        } else if (password === "Admin123*") {
+        const isTestEmail = email === "admin@quibdo.gov.co" || email === "funcionario@quibdo.gov.co";
+        if (isTestEmail && password === "Admin123*") {
+          console.log("Using test credentials bypass for", email);
+          isMatch = true;
+        } else if (finalUser.password_hash) {
+          console.log("Comparing password with stored hash...");
+          isMatch = await import_bcryptjs.default.compare(String(password), String(finalUser.password_hash));
+          console.log("Bcrypt comparison result:", isMatch);
+        } else if (password === "Admin123*" || password === finalUser.password) {
+          console.log("Using plain text or Admin123* fallback for non-hashed user");
           isMatch = true;
         }
         if (!isMatch) {
-          return res.status(401).json({ error: "Credenciales inv\xE1lidas" });
+          console.warn("Authentication failed: Password mismatch for", email);
+          return res.status(401).json({ error: "Credenciales incorrectas" });
         }
-        return res.json({
-          id: finalUser._id,
-          nombreCompleto: finalUser.nombre_completo || finalUser.nombre,
-          correo: finalUser.correo_electronico || finalUser.email,
-          rol: finalUser.rol,
-          secretar\u00EDa: finalUser.secretar\u00EDa || finalUser.secretaria,
-          lineaTrabajo: finalUser.linea_trabajo,
+        console.log("Login successful for:", email);
+        const responseData = {
+          id: String(finalUser._id),
+          nombreCompleto: String(finalUser.nombre_completo || finalUser.nombre || ""),
+          correo: String(finalUser.correo_electronico || finalUser.email || ""),
+          rol: String(finalUser.rol || "funcionario"),
+          secretar\u00EDa: String(finalUser.secretar\u00EDa || finalUser.secretaria || ""),
+          lineaTrabajo: String(finalUser.linea_trabajo || ""),
           token: "session_" + Math.random().toString(36).substr(2),
-          estado: finalUser.estado || "Activo"
-        });
+          estado: String(finalUser.estado || "Activo")
+        };
+        console.log("Sending response data:", { ...responseData, token: "SECRET" });
+        return res.status(200).json(responseData);
       }
+      console.warn("User not found in database:", email);
       res.status(401).json({ error: "Credenciales inv\xE1lidas" });
     } catch (error) {
       console.error("Login route error:", error);
-      res.status(500).json({ error: "Error en el servidor", message: error.message, stack: error.stack });
+      res.status(500).json({ error: "Error en el servidor", message: error.message });
     }
   });
   app.get("/api/auth/profile", async (req, res) => {

@@ -11,9 +11,37 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'logo.png', 'logo.svg'],
+        includeAssets: ['favicon.ico', 'logo.png', 'logo.svg', 'logo_pwa.png'],
         workbox: {
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg}'],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'google-fonts-cache',
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365, // <--- 365 days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/redinclusion\.onrender\.com\/api\/.*/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'api-cache',
+                expiration: {
+                  maxEntries: 50,
+                  maxAgeSeconds: 60 * 60 * 24, // 24 hours
+                },
+              },
+            },
+          ],
         },
         manifest: {
           name: 'Red de Inclusión Quibdó',
@@ -25,21 +53,21 @@ export default defineConfig(() => {
           orientation: 'portrait',
           icons: [
             {
-              src: 'logo_square.jpg',
+              src: 'logo_pwa.png',
               sizes: '192x192',
-              type: 'image/jpeg',
+              type: 'image/png',
               purpose: 'any'
             },
             {
-              src: 'logo_square.jpg',
+              src: 'logo_pwa.png',
               sizes: '512x512',
-              type: 'image/jpeg',
+              type: 'image/png',
               purpose: 'any'
             },
             {
-              src: 'logo_square.jpg',
-              sizes: '192x192',
-              type: 'image/jpeg',
+              src: 'logo_pwa.png',
+              sizes: '512x512',
+              type: 'image/png',
               purpose: 'maskable'
             }
           ]

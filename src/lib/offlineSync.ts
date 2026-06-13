@@ -30,6 +30,9 @@ export async function saveOfflineRequest(config: InternalAxiosRequestConfig) {
   });
 }
 
+const isCapacitor = window.location.protocol === 'capacitor:';
+const productionUrl = 'https://redinclusion.onrender.com';
+
 export async function processOfflineQueue() {
   const db = await getDB();
   const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -43,7 +46,7 @@ export async function processOfflineQueue() {
         method: req.method,
         data: req.data,
         headers: req.headers,
-        baseURL: '/api' // Assuming same base
+        baseURL: isCapacitor ? `${productionUrl}/api` : '/api'
       });
       await store.delete(req.id);
     } catch (error) {

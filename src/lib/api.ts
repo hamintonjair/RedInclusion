@@ -1,8 +1,11 @@
 import axios from 'axios';
 import { saveOfflineRequest, cacheResponse, getCachedResponse } from './offlineSync';
 
+const isCapacitor = window.location.protocol === 'capacitor:';
+const productionUrl = 'https://redinclusion.onrender.com';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: isCapacitor ? `${productionUrl}/api` : '/api',
   headers: {
     'Content-Type': 'application/json',
   },

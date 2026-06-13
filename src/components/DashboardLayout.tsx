@@ -53,6 +53,19 @@ const navItems: NavItem[] = [
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, updateUser } = useAuth();
+  const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const [isOpen, setIsOpen] = React.useState(true);
   const [isGestionExpanded, setIsGestionExpanded] = React.useState(true);
   const location = useLocation();
@@ -487,9 +500,17 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             >
               <Menu size={24} />
             </button>
-            <h1 className="text-lg font-display font-semibold text-slate-800 capitalize truncate max-w-[150px] sm:max-w-xs">
-              {location.pathname.replace('/', '') || 'Dashboard'}
-            </h1>
+            <div className="flex flex-col">
+              <h1 className="text-lg font-display font-semibold text-slate-800 capitalize truncate max-w-[120px] sm:max-w-xs leading-tight">
+                {location.pathname.replace('/', '') || 'Dashboard'}
+              </h1>
+              <div className="flex items-center gap-1 mt-0.5">
+                <div className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
+                <span className={cn("text-[8px] font-black uppercase tracking-widest", isOnline ? "text-emerald-600" : "text-red-600")}>
+                  {isOnline ? "En Línea" : "Sin Conexión"}
+                </span>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="hidden md:flex flex-col items-end mr-4">
