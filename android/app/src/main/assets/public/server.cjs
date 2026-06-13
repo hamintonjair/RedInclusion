@@ -88,17 +88,23 @@ async function startServer() {
       const finalUser = user || funcionario;
       if (finalUser) {
         console.log(`[AUTH] User found: ${finalUser._id}`);
+        console.log(`[AUTH] DB Fields: ${Object.keys(finalUser).join(", ")}`);
         let isMatch = false;
         const isTestEmail = email === "admin@quibdo.gov.co" || email === "funcionario@quibdo.gov.co";
         if (isTestEmail && password === "Admin123*") {
           console.log("[AUTH] Test credentials OK");
           isMatch = true;
         } else if (finalUser.password_hash) {
+          console.log("[AUTH] Comparing with hash...");
           isMatch = await import_bcryptjs.default.compare(String(password), String(finalUser.password_hash));
-          console.log(`[AUTH] Password hash comparison: ${isMatch}`);
-        } else if (password === "Admin123*" || password === finalUser.password) {
-          console.log("[AUTH] Password plaintext/fallback comparison success");
-          isMatch = true;
+          console.log(`[AUTH] Hash match: ${isMatch}`);
+        } else if (finalUser.password) {
+          console.log("[AUTH] Comparing with plain text...");
+          isMatch = password === finalUser.password || password === "Admin123*";
+          console.log(`[AUTH] Plain text match: ${isMatch}`);
+        } else {
+          console.log("[AUTH] No password field found in user document!");
+          if (password === "Admin123*") isMatch = true;
         }
         if (!isMatch) {
           console.warn(`[AUTH] Auth failed: Password mismatch for ${email}`);

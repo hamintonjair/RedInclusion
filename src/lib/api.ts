@@ -2,7 +2,8 @@ import axios from 'axios';
 import { saveOfflineRequest, cacheResponse, getCachedResponse } from './offlineSync';
 
 const isCapacitor = window.location.protocol === 'capacitor:';
-const productionUrl = 'https://redinclusion.onrender.com';
+// URL del servidor para la app móvil. Ajustado al entorno actual de desarrollo.
+const productionUrl = 'https://ais-dev-2lhgcb7gzapttpghvspaia-736890033354.us-east1.run.app';
 
 const api = axios.create({
   baseURL: isCapacitor ? `${productionUrl}/api` : '/api',
