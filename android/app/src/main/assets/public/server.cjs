@@ -35,10 +35,15 @@ async function startServer() {
   const app = (0, import_express.default)();
   const PORT = 3e3;
   app.use((0, import_cors.default)({
-    origin: "*",
-    // Permitir todos los orígenes para facilitar la depuración, se puede restringir luego
+    origin: (origin, callback) => {
+      if (!origin || origin.startsWith("http://localhost") || origin.startsWith("https://localhost") || origin.startsWith("capacitor://") || origin.startsWith("http://10.0.2.2")) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "X-Capacitor-Http"],
     credentials: true,
     preflightContinue: false,
     optionsSuccessStatus: 204

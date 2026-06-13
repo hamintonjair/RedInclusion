@@ -31,7 +31,7 @@ export default defineConfig(() => {
               },
             },
             {
-              urlPattern: /^https:\/\/redinclusion\.onrender\.com\/api\/.*/i,
+              urlPattern: /^https:\/\/ais-dev-2lhgcb7gzapttpghvspaia-736890033354\.us-east1\.run\.app\/api\/.*/i,
               handler: 'NetworkFirst',
               options: {
                 cacheName: 'api-cache',
@@ -53,19 +53,19 @@ export default defineConfig(() => {
           orientation: 'portrait',
           icons: [
             {
-              src: 'icon.png',
+              src: 'logo.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any'
             },
             {
-              src: 'icon.png',
+              src: 'logo.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any'
             },
             {
-              src: 'icon.png',
+              src: 'logo.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable'

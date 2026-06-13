@@ -17,14 +17,14 @@ async function startServer() {
   app.use(cors({
     origin: (origin, callback) => {
       // Permitir cualquier origen en desarrollo o desde apps móviles
-      if (!origin || origin.startsWith('http://localhost') || origin.startsWith('https://localhost') || origin === 'capacitor://localhost') {
+      if (!origin || origin.startsWith('http://localhost') || origin.startsWith('https://localhost') || origin.startsWith('capacitor://') || origin.startsWith('http://10.0.2.2')) {
         callback(null, true);
       } else {
         callback(null, true); // De momento permitir todos para evitar bloqueos en el entorno AI Studio
       }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Capacitor-Http'],
     credentials: true,
     preflightContinue: false,
     optionsSuccessStatus: 204
@@ -32,6 +32,7 @@ async function startServer() {
 
   // Asegurar que las peticiones OPTIONS (preflight) terminen rápido sin redirecciones
   app.options('*', cors());
+
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 

@@ -1,17 +1,19 @@
 import axios from 'axios';
+import { Capacitor, CapacitorHttp, HttpResponse } from '@capacitor/core';
 import { saveOfflineRequest, cacheResponse, getCachedResponse } from './offlineSync';
 
 // Detectar si estamos en un entorno móvil (Capacitor)
-const isCapacitor = 
-  window.location.protocol === 'capacitor:' || 
-  window.location.hostname === 'localhost' ||
-  (window as any).Capacitor !== undefined;
+const isCapacitor = Capacitor.isNativePlatform();
 
-// URL del servidor para la app móvil. Ajustado al entorno actual de desarrollo.
-const productionUrl = 'https://ais-dev-2lhgcb7gzapttpghvspaia-736890033354.us-east1.run.app';
+// URL del servidor para la app móvil. 
+// Usamos el URL compartido (pre) para móviles ya que suele permitir conexiones externas sin bloqueos de sesión del IDE.
+const productionUrl = 'https://ais-pre-2lhgcb7gzapttpghvspaia-736890033354.us-east1.run.app';
+const devUrl = 'https://ais-dev-2lhgcb7gzapttpghvspaia-736890033354.us-east1.run.app';
 
-console.log(`[API] Protocol: ${window.location.protocol}, Hostname: ${window.location.hostname}, isCapacitor: ${isCapacitor}`);
 
+console.log(`[API] Platform: ${Capacitor.getPlatform()}, isCapacitor: ${isCapacitor}`);
+
+// Configuración de Axios para Web (cuando no es Capacitor)
 const api = axios.create({
   baseURL: isCapacitor ? `${productionUrl}/api` : '/api',
   headers: {
@@ -19,7 +21,40 @@ const api = axios.create({
   },
 });
 
-// Request Interceptor
+// Función auxiliar para hacer peticiones usando CapacitorHttp (nativo)
+const nativeRequest = async (config: any) => {
+  const url = config.url.startsWith('http') ? config.url : `${productionUrl}${config.url.startsWith('/') ? config.url : '/api/' + config.url}`;
+  
+  const options = {
+    url,
+    method: config.method?.toUpperCase() || 'GET',
+    headers: {
+      ...config.headers,
+      'Content-Type': 'application/json',
+    },
+    data: config.data,
+    params: config.params
+  };
+
+  try {
+    console.log(`[API-NATIVE] ${options.method} ${options.url}`);
+    const response: HttpResponse = await CapacitorHttp.request(options);
+    
+    // Adaptar respuesta de CapacitorHttp al formato que espera Axios/App
+    return {
+      data: response.data,
+      status: response.status,
+      statusText: 'OK',
+      headers: response.headers,
+      config: config
+    };
+  } catch (error) {
+    console.error('[API-NATIVE] Error:', error);
+    throw error;
+  }
+};
+
+// Request Interceptor para añadir el Token
 api.interceptors.request.use((config) => {
   const userStr = localStorage.getItem('auth_user');
   if (userStr) {
@@ -30,6 +65,15 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Interceptamos la llamada principal si es Capacitor para usar el plugin nativo
+if (isCapacitor) {
+  // Sobrescribimos el adapter de axios para usar CapacitorHttp
+  // Esto es más limpio que interceptar cada método
+  (api.defaults as any).adapter = async (config: any) => {
+    return nativeRequest(config);
+  };
+}
 
 // Intercept Axios to handle offline gracefully
 api.interceptors.response.use(
@@ -43,7 +87,7 @@ api.interceptors.response.use(
   },
   async (error) => {
     // If network error (offline)
-    if (!navigator.onLine || error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+    if (!navigator.onLine || error.code === 'ERR_NETWORK' || error.message === 'Network Error' || error.status === 0) {
       const config = error.config;
       const method = config.method?.toUpperCase();
 
@@ -63,8 +107,6 @@ api.interceptors.response.use(
 
         console.warn('Network error, queueing request', config.url);
         await saveOfflineRequest(config);
-        // Resolve with a mock success so UI doesn't crash, or reject depending on desired behavior.
-        // Returning a mock success means the user sees "success" but it's synced later.
         return Promise.resolve({ data: { message: 'Guardado localmente. Se sincronizará al conectar.' }, status: 202, statusText: 'Accepted', headers: {}, config: config });
       }
     }
