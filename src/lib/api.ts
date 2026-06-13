@@ -1,21 +1,13 @@
 import axios from 'axios';
 import { Capacitor, CapacitorHttp, HttpResponse } from '@capacitor/core';
-import { saveOfflineRequest, cacheResponse, getCachedResponse } from './offlineSync';
-
-// Detectar si estamos en un entorno móvil (Capacitor)
-const isCapacitor = Capacitor.isNativePlatform();
-
-// URL del servidor para la app móvil. 
-// Usamos el URL compartido (pre) para móviles ya que suele permitir conexiones externas sin bloqueos de sesión del IDE.
-const productionUrl = 'https://ais-pre-2lhgcb7gzapttpghvspaia-736890033354.us-east1.run.app';
-const devUrl = 'https://ais-dev-2lhgcb7gzapttpghvspaia-736890033354.us-east1.run.app';
-
+import { saveOfflineRequest, cacheResponse, getCachedResponse, setRequestExecutor } from './offlineSync';
+import { isCapacitor, PRE_URL, getFullApiUrl } from './config';
 
 console.log(`[API] Platform: ${Capacitor.getPlatform()}, isCapacitor: ${isCapacitor}`);
 
 // Configuración de Axios para Web (cuando no es Capacitor)
 const api = axios.create({
-  baseURL: isCapacitor ? `${productionUrl}/api` : '/api',
+  baseURL: isCapacitor ? `${PRE_URL}/api` : '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,7 +15,7 @@ const api = axios.create({
 
 // Función auxiliar para hacer peticiones usando CapacitorHttp (nativo)
 const nativeRequest = async (config: any) => {
-  const url = config.url.startsWith('http') ? config.url : `${productionUrl}${config.url.startsWith('/') ? config.url : '/api/' + config.url}`;
+  const url = config.url.startsWith('http') ? config.url : getFullApiUrl(config.url);
   
   const options = {
     url,
@@ -31,6 +23,7 @@ const nativeRequest = async (config: any) => {
     headers: {
       ...config.headers,
       'Content-Type': 'application/json',
+      ... (isCapacitor ? { 'X-Capacitor-Http': 'true' } : {})
     },
     data: config.data,
     params: config.params
@@ -40,6 +33,18 @@ const nativeRequest = async (config: any) => {
     console.log(`[API-NATIVE] ${options.method} ${options.url}`);
     const response: HttpResponse = await CapacitorHttp.request(options);
     
+    // Si la respuesta es HTML, probablemente es una redirección a login de Google/AI-Studio
+    if (typeof response.data === 'string' && response.data.trim().startsWith('<!doctype html>')) {
+      console.error('[API-NATIVE] El servidor devolvió HTML en lugar de JSON. Es posible que el entorno requiera inicio de sesión en AI Studio.');
+      return {
+        data: { error: 'Requiere sesión en AI Studio. Asegúrese de que la app sea pública.' },
+        status: 403,
+        statusText: 'Forbidden',
+        headers: response.headers,
+        config: config
+      };
+    }
+
     // Adaptar respuesta de CapacitorHttp al formato que espera Axios/App
     return {
       data: response.data,
@@ -70,9 +75,16 @@ api.interceptors.request.use((config) => {
 if (isCapacitor) {
   // Sobrescribimos el adapter de axios para usar CapacitorHttp
   // Esto es más limpio que interceptar cada método
-  (api.defaults as any).adapter = async (config: any) => {
+  const capacitorAdapter = async (config: any) => {
     return nativeRequest(config);
   };
+  (api.defaults as any).adapter = capacitorAdapter;
+  
+  // Registramos el ejecutor para peticiones offline
+  setRequestExecutor(capacitorAdapter);
+} else {
+  // En web, registramos el ejecutor estándar
+  setRequestExecutor(async (config: any) => api.request(config));
 }
 
 // Intercept Axios to handle offline gracefully

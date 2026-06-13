@@ -1,10 +1,17 @@
-import axios, { InternalAxiosRequestConfig } from 'axios';
+import { InternalAxiosRequestConfig } from 'axios';
 import { openDB } from 'idb';
 import { Network } from '@capacitor/network';
+import { isCapacitor, getFullApiUrl } from './config';
 
 const DB_NAME = 'RedInclusionOfflineDB';
 const STORE_NAME = 'requestsQueue';
 const CACHE_STORE = 'requestCache';
+
+let requestExecutor: ((config: any) => Promise<any>) | null = null;
+
+export function setRequestExecutor(executor: (config: any) => Promise<any>) {
+  requestExecutor = executor;
+}
 
 async function getDB() {
   return openDB(DB_NAME, 1, {
@@ -30,23 +37,25 @@ export async function saveOfflineRequest(config: InternalAxiosRequestConfig) {
   });
 }
 
-const isCapacitor = window.location.protocol === 'capacitor:';
-const productionUrl = 'https://redinclusion.onrender.com';
-
 export async function processOfflineQueue() {
   const db = await getDB();
   const tx = db.transaction(STORE_NAME, 'readwrite');
   const store = tx.objectStore(STORE_NAME);
   const requests = await store.getAll();
 
+  if (!requests.length) return;
+  if (!requestExecutor) {
+    console.warn('Request executor not set yet, skipping sync.');
+    return;
+  }
+
   for (const req of requests) {
     try {
-      await axios.request({
+      await requestExecutor({
         url: req.url,
         method: req.method,
         data: req.data,
-        headers: req.headers,
-        baseURL: isCapacitor ? `${productionUrl}/api` : '/api'
+        headers: req.headers
       });
       await store.delete(req.id);
     } catch (error) {
