@@ -39,10 +39,18 @@ async function startServer() {
 
   // Auth API
   app.post("/api/auth/login", async (req, res) => {
-    const { email, password } = req.body;
+    console.log("Login request received:", { email: req.body?.email });
+    const { email, password } = req.body || {};
     
+    if (!email || !password) {
+      console.warn("Login attempt missing email or password");
+      return res.status(400).json({ error: "Correo y contraseña son requeridos" });
+    }
+
     if (!db) {
+      console.log("Database not connected, checking offline credentials...");
       if (email === "admin@quibdo.gov.co" && password === "Admin123*") {
+        console.log("Offline login successful for admin");
         return res.json({
           id: "1",
           nombreCompleto: "Administrador (Offline Mode)",
@@ -51,10 +59,12 @@ async function startServer() {
           token: "mock_jwt_token"
         });
       }
-      return res.status(503).json({ error: "Base de datos no disponible" });
+      console.warn("Database not connected and credentials don't match offline admin");
+      return res.status(503).json({ error: "Base de datos no disponible y credenciales no válidas para modo offline" });
     }
 
     try {
+      console.log("Searching for user in database:", email);
       // Intentar buscar en usuarios o funcionarios como indica el README
       let user = await db.collection('usuarios').findOne({ correo_electronico: email });
       let funcionario = !user ? await db.collection('funcionarios').findOne({ email: email }) : null;
@@ -62,9 +72,11 @@ async function startServer() {
       // Si se usan las credenciales de prueba predeterminadas en el Login que no existen explícitamente en la BD:
       if (!user && !funcionario) {
         if (email === "admin@quibdo.gov.co") {
+          console.log("Attempting fallback for admin test email");
           // Mapear al administrador real de la base de datos (e.g. admin@redinclusion.com)
           funcionario = await db.collection('funcionarios').findOne({ rol: "admin" });
         } else if (email === "funcionario@quibdo.gov.co") {
+          console.log("Attempting fallback for funcionario test email");
           // Mapear al primer funcionario común de la base de datos (e.g. Yordan Solis)
           funcionario = await db.collection('funcionarios').findOne({ rol: "funcionario" });
         }
@@ -73,6 +85,7 @@ async function startServer() {
       const finalUser = user || funcionario;
 
       if (finalUser) {
+        console.log("User found, verifying password...");
         // En caso de usar los correos de prueba, el password predeterminado "Admin123*" es válido para facilitar el acceso sin que falle por hash
         let isMatch = false;
         if (finalUser.password_hash) {
@@ -86,10 +99,12 @@ async function startServer() {
         }
 
         if (!isMatch) {
+          console.warn("Password mismatch for:", email);
           return res.status(401).json({ error: "Credenciales inválidas" });
         }
 
-        return res.json({
+        console.log("Login successful for:", email);
+        const responseData = {
           id: finalUser._id,
           nombreCompleto: finalUser.nombre_completo || finalUser.nombre,
           correo: finalUser.correo_electronico || finalUser.email,
@@ -98,13 +113,15 @@ async function startServer() {
           lineaTrabajo: finalUser.linea_trabajo,
           token: "session_" + Math.random().toString(36).substr(2),
           estado: finalUser.estado || 'Activo'
-        });
+        };
+        return res.json(responseData);
       }
       
+      console.warn("User not found in database:", email);
       res.status(401).json({ error: "Credenciales inválidas" });
     } catch (error: any) {
       console.error("Login route error:", error);
-      res.status(500).json({ error: "Error en el servidor", message: error.message, stack: error.stack });
+      res.status(500).json({ error: "Error en el servidor", message: error.message });
     }
   });
 

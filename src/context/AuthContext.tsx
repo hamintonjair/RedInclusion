@@ -48,6 +48,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.post('/auth/login', { email, password: pass });
       const userData = response.data;
       
+      // Valida que el objeto de usuario tenga una estructura mínima válida
+      if (!userData || typeof userData !== 'object' || (!userData.id && !userData._id)) {
+        console.error('La respuesta del servidor no tiene el formato esperado:', userData);
+        setIsLoading(false);
+        return false;
+      }
+      
       setUser(userData);
       localStorage.setItem('auth_user', JSON.stringify(userData));
       setIsLoading(false);
