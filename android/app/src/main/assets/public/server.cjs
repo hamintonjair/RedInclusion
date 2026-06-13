@@ -24,6 +24,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 // server.ts
 var import_express = __toESM(require("express"), 1);
 var import_path = __toESM(require("path"), 1);
+var import_cors = __toESM(require("cors"), 1);
 var import_vite = require("vite");
 var import_mongodb = require("mongodb");
 var import_bcryptjs = __toESM(require("bcryptjs"), 1);
@@ -33,6 +34,7 @@ async function startServer() {
   console.log("Starting server... NODE_ENV:", process.env.NODE_ENV);
   const app = (0, import_express.default)();
   const PORT = 3e3;
+  app.use((0, import_cors.default)());
   app.use(import_express.default.json());
   app.use(import_express.default.urlencoded({ extended: true }));
   const mongoUri = process.env.MONGODB_URI;
@@ -55,16 +57,16 @@ async function startServer() {
     });
   });
   app.post("/api/auth/login", async (req, res) => {
-    console.log("Login request received:", { email: req.body?.email });
-    const { email, password } = req.body || {};
+    const { email: rawEmail, password } = req.body || {};
+    const email = String(rawEmail || "").trim().toLowerCase();
+    console.log(`[AUTH] Login attempt for: ${email}`);
     if (!email || !password) {
-      console.warn("Login attempt missing email or password");
+      console.warn("[AUTH] Missing email or password");
       return res.status(400).json({ error: "Correo y contrase\xF1a son requeridos" });
     }
     if (!db) {
-      console.log("Database not connected, checking offline credentials...");
+      console.log("[AUTH] Database not connected, checking offline admin...");
       if (email === "admin@quibdo.gov.co" && password === "Admin123*") {
-        console.log("Offline login successful for admin");
         return res.json({
           id: "1",
           nombreCompleto: "Administrador (Offline Mode)",
@@ -73,47 +75,36 @@ async function startServer() {
           token: "mock_jwt_token"
         });
       }
-      console.warn("Database not connected and credentials don't match offline admin");
-      return res.status(503).json({ error: "Base de datos no disponible y credenciales no v\xE1lidas para modo offline" });
+      return res.status(503).json({ error: "Base de datos no disponible" });
     }
     try {
-      console.log("Searching for user in database:", email);
-      let user = await db.collection("usuarios").findOne({ correo_electronico: email });
-      let funcionario = !user ? await db.collection("funcionarios").findOne({ email }) : null;
-      if (!user && !funcionario) {
-        if (email === "admin@quibdo.gov.co") {
-          console.log("Attempting fallback for admin test email");
-          funcionario = await db.collection("funcionarios").findOne({ rol: "admin" });
-        } else if (email === "funcionario@quibdo.gov.co") {
-          console.log("Attempting fallback for funcionario test email");
-          funcionario = await db.collection("funcionarios").findOne({ rol: "funcionario" });
-        }
-      }
+      console.log(`[AUTH] Searching database for: ${email}`);
+      let user = await db.collection("usuarios").findOne({
+        $or: [{ correo_electronico: email }, { email }]
+      });
+      let funcionario = !user ? await db.collection("funcionarios").findOne({
+        $or: [{ correo_electronico: email }, { email }]
+      }) : null;
       const finalUser = user || funcionario;
       if (finalUser) {
-        console.log("User found in database:", {
-          id: finalUser._id,
-          email: finalUser.correo_electronico || finalUser.email,
-          hasHash: !!finalUser.password_hash
-        });
+        console.log(`[AUTH] User found: ${finalUser._id}`);
         let isMatch = false;
         const isTestEmail = email === "admin@quibdo.gov.co" || email === "funcionario@quibdo.gov.co";
         if (isTestEmail && password === "Admin123*") {
-          console.log("Using test credentials bypass for", email);
+          console.log("[AUTH] Test credentials OK");
           isMatch = true;
         } else if (finalUser.password_hash) {
-          console.log("Comparing password with stored hash...");
           isMatch = await import_bcryptjs.default.compare(String(password), String(finalUser.password_hash));
-          console.log("Bcrypt comparison result:", isMatch);
+          console.log(`[AUTH] Password hash comparison: ${isMatch}`);
         } else if (password === "Admin123*" || password === finalUser.password) {
-          console.log("Using plain text or Admin123* fallback for non-hashed user");
+          console.log("[AUTH] Password plaintext/fallback comparison success");
           isMatch = true;
         }
         if (!isMatch) {
-          console.warn("Authentication failed: Password mismatch for", email);
+          console.warn(`[AUTH] Auth failed: Password mismatch for ${email}`);
           return res.status(401).json({ error: "Credenciales incorrectas" });
         }
-        console.log("Login successful for:", email);
+        console.log(`[AUTH] Login successful: ${email}`);
         const responseData = {
           id: String(finalUser._id),
           nombreCompleto: String(finalUser.nombre_completo || finalUser.nombre || ""),
@@ -124,14 +115,13 @@ async function startServer() {
           token: "session_" + Math.random().toString(36).substr(2),
           estado: String(finalUser.estado || "Activo")
         };
-        console.log("Sending response data:", { ...responseData, token: "SECRET" });
         return res.status(200).json(responseData);
       }
-      console.warn("User not found in database:", email);
-      res.status(401).json({ error: "Credenciales inv\xE1lidas" });
+      console.warn(`[AUTH] User not found: ${email}`);
+      return res.status(401).json({ error: "Credenciales incorrectas" });
     } catch (error) {
-      console.error("Login route error:", error);
-      res.status(500).json({ error: "Error en el servidor", message: error.message });
+      console.error("[AUTH] Error:", error);
+      return res.status(500).json({ error: "Error en el servidor" });
     }
   });
   app.get("/api/auth/profile", async (req, res) => {
