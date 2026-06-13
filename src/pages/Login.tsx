@@ -31,7 +31,7 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
+    <div className="flex flex-col md:flex-row min-h-screen pt-[env(safe-area-inset-top,0px)] md:pt-0">
       {/* Lado izquierdo con imagen (Banner de la Alcaldía) */}
       <div 
         className="flex w-full md:w-7/12 bg-white flex-col items-center justify-center p-6 md:p-8 relative overflow-hidden border-b md:border-b-0 md:border-r border-slate-100"

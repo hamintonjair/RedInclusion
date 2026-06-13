@@ -261,7 +261,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         )}
       >
         {/* Top Header Box in Sidebar */}
-        <div className="p-3 select-none flex flex-col gap-2 border-b border-slate-100 shrink-0">
+        <div className="p-3 select-none flex flex-col gap-2 border-b border-slate-100 shrink-0 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] md:pt-3">
           <AnimatePresence mode="wait">
             {isOpen ? (
               <motion.div
@@ -492,7 +492,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0">
+        <header className="min-h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 pt-[env(safe-area-inset-top,0px)] pb-1 md:pt-0 md:pb-0 h-auto md:h-16">
           <div className="flex items-center gap-2 md:gap-4">
             <button 
               onClick={() => setIsOpen(true)}
