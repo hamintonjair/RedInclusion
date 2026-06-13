@@ -1419,6 +1419,9 @@ async function startServer() {
     const distPath = import_path.default.join(process.cwd(), "dist");
     app.use(import_express.default.static(distPath));
     app.get("*", (req, res) => {
+      if (req.path.startsWith("/api")) {
+        return res.status(404).json({ error: "API endpoint not found" });
+      }
       res.sendFile(import_path.default.join(distPath, "index.html"));
     });
   }

@@ -53,8 +53,8 @@ const nativeRequest = async (config: any) => {
       headers: response.headers,
       config: config
     };
-  } catch (error) {
-    console.error('[API-NATIVE] Error:', error);
+  } catch (error: any) {
+    console.error('[API-NATIVE] Error:', error.message || error);
     throw error;
   }
 };
