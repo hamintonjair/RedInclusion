@@ -15,9 +15,16 @@ async function startServer() {
 
   // Habilitar CORS con configuración específica para el entorno móvil
   app.use(cors({
-    origin: '*', // Permitir todos los orígenes para facilitar la depuración, se puede restringir luego
+    origin: (origin, callback) => {
+      // Permitir cualquier origen en desarrollo o desde apps móviles
+      if (!origin || origin.startsWith('http://localhost') || origin.startsWith('https://localhost') || origin === 'capacitor://localhost') {
+        callback(null, true);
+      } else {
+        callback(null, true); // De momento permitir todos para evitar bloqueos en el entorno AI Studio
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
     credentials: true,
     preflightContinue: false,
     optionsSuccessStatus: 204

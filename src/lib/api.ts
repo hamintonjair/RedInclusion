@@ -55,6 +55,12 @@ api.interceptors.response.use(
           return Promise.resolve({ data: cachedData, status: 200, statusText: 'OK', headers: {}, config: config });
         }
       } else if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method!)) {
+        // No interceptar login/registro para el modo offline ya que requieren auth real
+        if (config.url?.includes('/auth/')) {
+          console.error('Auth request failed and cannot be queued:', config.url, error);
+          return Promise.reject(error);
+        }
+
         console.warn('Network error, queueing request', config.url);
         await saveOfflineRequest(config);
         // Resolve with a mock success so UI doesn't crash, or reject depending on desired behavior.
