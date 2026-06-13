@@ -637,7 +637,11 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                         <select
                           value={secretaria}
                           onChange={(e) => setSecretaria(e.target.value)}
-                          className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-display text-slate-1000 focus:outline-none focus:border-brand-green focus:bg-white transition-all shadow-sm h-10 cursor-pointer"
+                          disabled={user?.rol === 'funcionario'}
+                          className={cn(
+                            "w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-display transition-all shadow-sm h-10",
+                            user?.rol === 'funcionario' ? "opacity-70 cursor-not-allowed bg-slate-100 text-slate-500" : "text-slate-1000 focus:outline-none focus:border-brand-green focus:bg-white cursor-pointer"
+                          )}
                         >
                           <option value="">Seleccione secretaría...</option>
                           {(secretariasDisponibles.length > 0
@@ -663,7 +667,11 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                           <select
                             value={linea}
                             onChange={(e) => setLinea(e.target.value)}
-                            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-display text-slate-1000 focus:outline-none focus:border-brand-green focus:bg-white transition-all shadow-sm h-10 cursor-pointer"
+                            disabled={user?.rol === 'funcionario'}
+                            className={cn(
+                              "w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-display transition-all shadow-sm h-10",
+                              user?.rol === 'funcionario' ? "opacity-70 cursor-not-allowed bg-slate-100 text-slate-500" : "text-slate-1000 focus:outline-none focus:border-brand-green focus:bg-white cursor-pointer"
+                            )}
                           >
                             {(lineasDisponibles.length > 0
                               ? lineasDisponibles.map(l => ({ id: l._id || l.id, nombre: l.nombre }))
