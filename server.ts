@@ -87,22 +87,34 @@ async function startServer() {
       const finalUser = user || funcionario;
 
       if (finalUser) {
-        console.log("User found, verifying password...");
+        console.log("User found in database:", { 
+          id: finalUser._id, 
+          email: finalUser.correo_electronico || finalUser.email,
+          hasHash: !!finalUser.password_hash 
+        });
+        
         // En caso de usar los correos de prueba, el password predeterminado "Admin123*" es válido para facilitar el acceso sin que falle por hash
         let isMatch = false;
-        if (finalUser.password_hash) {
-          if ((email === "admin@quibdo.gov.co" || email === "funcionario@quibdo.gov.co") && password === "Admin123*") {
-            isMatch = true;
-          } else {
-            isMatch = await bcrypt.compare(String(password), String(finalUser.password_hash));
-          }
-        } else if (password === 'Admin123*') { // Fallback for legacy users without hash
+        
+        // Check if it's a test account using the hardcoded test password
+        const isTestEmail = email === "admin@quibdo.gov.co" || email === "funcionario@quibdo.gov.co";
+        
+        if (isTestEmail && password === "Admin123*") {
+          console.log("Using test credentials bypass for", email);
+          isMatch = true;
+        } else if (finalUser.password_hash) {
+          console.log("Comparing password with stored hash...");
+          isMatch = await bcrypt.compare(String(password), String(finalUser.password_hash));
+          console.log("Bcrypt comparison result:", isMatch);
+        } else if (password === 'Admin123*' || password === finalUser.password) { 
+          // Fallback for legacy users without hash or plain text (not recommended but for migration)
+          console.log("Using plain text or Admin123* fallback for non-hashed user");
           isMatch = true;
         }
 
         if (!isMatch) {
-          console.warn("Password mismatch for:", email);
-          return res.status(401).json({ error: "Credenciales inválidas" });
+          console.warn("Authentication failed: Password mismatch for", email);
+          return res.status(401).json({ error: "Credenciales incorrectas" });
         }
 
         console.log("Login successful for:", email);

@@ -19,17 +19,28 @@ export default defineConfig(() => {
           name: 'Red de Inclusión Quibdó',
           short_name: 'InclusiónQBD',
           description: 'Plataforma de gestión para la Red de Inclusión de Quibdó',
-          theme_color: '#ffffff',
+          theme_color: '#10b981',
+          background_color: '#ffffff',
+          display: 'standalone',
+          orientation: 'portrait',
           icons: [
             {
-              src: 'logo.png',
+              src: 'logo_square.jpg',
               sizes: '192x192',
-              type: 'image/png'
+              type: 'image/jpeg',
+              purpose: 'any'
             },
             {
-              src: 'logo.png',
+              src: 'logo_square.jpg',
               sizes: '512x512',
-              type: 'image/png'
+              type: 'image/jpeg',
+              purpose: 'any'
+            },
+            {
+              src: 'logo_square.jpg',
+              sizes: '192x192',
+              type: 'image/jpeg',
+              purpose: 'maskable'
             }
           ]
         }
