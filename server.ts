@@ -13,8 +13,18 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Habilitar CORS para que la App móvil pueda comunicarse con el servidor
-  app.use(cors());
+  // Habilitar CORS con configuración específica para el entorno móvil
+  app.use(cors({
+    origin: '*', // Permitir todos los orígenes para facilitar la depuración, se puede restringir luego
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+  }));
+
+  // Asegurar que las peticiones OPTIONS (preflight) terminen rápido sin redirecciones
+  app.options('*', cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 

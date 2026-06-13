@@ -34,9 +34,24 @@ async function startServer() {
   console.log("Starting server... NODE_ENV:", process.env.NODE_ENV);
   const app = (0, import_express.default)();
   const PORT = 3e3;
-  app.use((0, import_cors.default)());
+  app.use((0, import_cors.default)({
+    origin: "*",
+    // Permitir todos los orígenes para facilitar la depuración, se puede restringir luego
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+  }));
+  app.options("*", (0, import_cors.default)());
   app.use(import_express.default.json());
   app.use(import_express.default.urlencoded({ extended: true }));
+  app.use((req, _res, next) => {
+    if (req.path.startsWith("/api")) {
+      console.log(`[API] ${req.method} ${req.path} - ${(/* @__PURE__ */ new Date()).toISOString()}`);
+    }
+    next();
+  });
   const mongoUri = process.env.MONGODB_URI;
   let db = null;
   if (mongoUri) {
