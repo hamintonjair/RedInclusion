@@ -18,6 +18,14 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Logger para depurar peticiones (especialmente desde la App móvil)
+  app.use((req, _res, next) => {
+    if (req.path.startsWith('/api')) {
+      console.log(`[API] ${req.method} ${req.path} - ${new Date().toISOString()}`);
+    }
+    next();
+  });
+
   // Connection to MongoDB
   const mongoUri = process.env.MONGODB_URI;
   let db: any = null;

@@ -1,9 +1,16 @@
 import axios from 'axios';
 import { saveOfflineRequest, cacheResponse, getCachedResponse } from './offlineSync';
 
-const isCapacitor = window.location.protocol === 'capacitor:';
+// Detectar si estamos en un entorno móvil (Capacitor)
+const isCapacitor = 
+  window.location.protocol === 'capacitor:' || 
+  window.location.hostname === 'localhost' ||
+  (window as any).Capacitor !== undefined;
+
 // URL del servidor para la app móvil. Ajustado al entorno actual de desarrollo.
 const productionUrl = 'https://ais-dev-2lhgcb7gzapttpghvspaia-736890033354.us-east1.run.app';
+
+console.log(`[API] Protocol: ${window.location.protocol}, Hostname: ${window.location.hostname}, isCapacitor: ${isCapacitor}`);
 
 const api = axios.create({
   baseURL: isCapacitor ? `${productionUrl}/api` : '/api',
