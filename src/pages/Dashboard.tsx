@@ -787,7 +787,7 @@ export const Dashboard: React.FC = () => {
                   <div className="md:col-span-7 flex flex-col items-center gap-4 print:col-span-7">
                     <div className="border border-slate-200 rounded-3xl overflow-hidden p-6 bg-slate-50/50 w-full flex items-center justify-center relative aspect-[4/3] print:border-slate-300 print:bg-white print:p-2">
                       <img 
-                        src="https://upload.wikimedia.org/wikipedia/commons/7/78/Comunas_de_Quibd%C3%B3.svg" 
+                        src="https://wsrv.nl/?url=https://upload.wikimedia.org/wikipedia/commons/7/78/Comunas_de_Quibd%C3%B3.svg&output=svg" 
                         alt="Mapa Oficial de Comunas Quibdó" 
                         className="max-w-full max-h-[350px] object-contain select-none print:max-h-[380px]"
                         referrerPolicy="no-referrer"

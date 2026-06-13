@@ -129,7 +129,7 @@ const MapaRegistros: React.FC<MapaRegistrosProps> = ({ registros, totalRegistros
         {/* Contenedor de Capas con Zoom (Al 130%) */}
         <div className="relative w-full h-full transform scale-[1.2] transition-transform duration-500">
           <img 
-            src="https://upload.wikimedia.org/wikipedia/commons/7/78/Comunas_de_Quibd%C3%B3.svg" 
+            src="https://wsrv.nl/?url=https://upload.wikimedia.org/wikipedia/commons/7/78/Comunas_de_Quibd%C3%B3.svg&output=svg" 
             alt="Mapa oficial comunas Quibdó" 
             className="w-full h-full object-contain select-none opacity-90"
             referrerPolicy="no-referrer"
