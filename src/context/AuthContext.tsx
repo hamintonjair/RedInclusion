@@ -44,23 +44,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
+    console.log('Intentando login para:', email);
     try {
       const response = await api.post('/auth/login', { email, password: pass });
+      console.log('Respuesta de login recibida:', response.status, response.data);
       const userData = response.data;
       
       // Valida que el objeto de usuario tenga una estructura mínima válida
       if (!userData || typeof userData !== 'object' || (!userData.id && !userData._id)) {
-        console.error('La respuesta del servidor no tiene el formato esperado:', userData);
+        console.error('La respuesta del servidor no tiene el formato esperado o está vacía:', userData);
         setIsLoading(false);
         return false;
       }
       
+      console.log('Login exitoso, guardando usuario...');
       setUser(userData);
       localStorage.setItem('auth_user', JSON.stringify(userData));
       setIsLoading(false);
       return true;
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (error: any) {
+      console.error('Error detallado de login:', error.response?.status, error.response?.data || error.message);
       setIsLoading(false);
       return false;
     }

@@ -8,10 +8,12 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 async function startServer() {
+  console.log("Starting server... NODE_ENV:", process.env.NODE_ENV);
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
 
   // Connection to MongoDB
   const mongoUri = process.env.MONGODB_URI;
@@ -105,16 +107,18 @@ async function startServer() {
 
         console.log("Login successful for:", email);
         const responseData = {
-          id: finalUser._id,
-          nombreCompleto: finalUser.nombre_completo || finalUser.nombre,
-          correo: finalUser.correo_electronico || finalUser.email,
-          rol: finalUser.rol,
-          secretaría: finalUser.secretaría || finalUser.secretaria,
-          lineaTrabajo: finalUser.linea_trabajo,
+          id: String(finalUser._id),
+          nombreCompleto: String(finalUser.nombre_completo || finalUser.nombre || ""),
+          correo: String(finalUser.correo_electronico || finalUser.email || ""),
+          rol: String(finalUser.rol || "funcionario"),
+          secretaría: String(finalUser.secretaría || finalUser.secretaria || ""),
+          lineaTrabajo: String(finalUser.linea_trabajo || ""),
           token: "session_" + Math.random().toString(36).substr(2),
-          estado: finalUser.estado || 'Activo'
+          estado: String(finalUser.estado || 'Activo')
         };
-        return res.json(responseData);
+        
+        console.log("Sending response data:", { ...responseData, token: "SECRET" });
+        return res.status(200).json(responseData);
       }
       
       console.warn("User not found in database:", email);
