@@ -14,9 +14,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  EyeOff
+  EyeOff,
+  CheckCircle2
 } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn, formatDate } from '../lib/utils';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -60,6 +62,12 @@ export const Funcionarios: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(9); // Since it's a 3x3 grid usually
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -104,8 +112,20 @@ export const Funcionarios: React.FC = () => {
 
       if (editingId) {
         await api.put(`/funcionarios/${editingId}`, payload);
+        setSuccessModal({
+          isOpen: true,
+          title: 'Actualización Exitosa',
+          message: `El funcionario "${data.nombre}" ha sido actualizado exitosamente en el sistema.`,
+          type: 'success'
+        });
       } else {
         await api.post('/funcionarios', payload);
+        setSuccessModal({
+          isOpen: true,
+          title: 'Registro Completado',
+          message: `El funcionario "${data.nombre}" ha sido registrado correctamente con rol de ${data.rol === 'admin' ? 'Administrador' : 'Funcionario'}.`,
+          type: 'success'
+        });
       }
       setIsFormOpen(false);
       reset();
@@ -113,7 +133,12 @@ export const Funcionarios: React.FC = () => {
       fetchData();
     } catch (error) {
       console.error('Error saving:', error);
-      alert('Error al guardar el funcionario.');
+      setSuccessModal({
+        isOpen: true,
+        title: 'Error de Guardado',
+        message: 'Ocurrió un error inesperado al intentar guardar los datos del funcionario en el servidor. Por favor, revisa tus datos y reintenta.',
+        type: 'error'
+      });
     }
   };
 
@@ -135,12 +160,26 @@ export const Funcionarios: React.FC = () => {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
+      const funcionario = funcionarios.find(f => f._id === deleteId);
+      const nombreEliminado = funcionario ? funcionario.nombre : 'Funcionario';
       await api.delete(`/funcionarios/${deleteId}`);
       setDeleteId(null);
       fetchData();
+      setSuccessModal({
+        isOpen: true,
+        title: 'Eliminación Exitosa',
+        message: `El funcionario "${nombreEliminado}" ha sido eliminado del sistema de manera definitiva.`,
+        type: 'success'
+      });
     } catch (error) {
       console.error('Error deleting:', error);
-      alert('Error al eliminar funcionario.');
+      setDeleteId(null);
+      setSuccessModal({
+        isOpen: true,
+        title: 'Error al Eliminar',
+        message: 'No fue posible eliminar al funcionario debido a un problema con el servidor. Reintente más tarde.',
+        type: 'error'
+      });
     }
   };
 
@@ -304,8 +343,8 @@ export const Funcionarios: React.FC = () => {
       </div>
 
       {/* Pagination */}
-      <div className="p-8 border-t border-slate-50 flex items-center justify-between bg-slate-50/10">
-        <div className="flex items-center gap-6">
+      <div className="p-6 md:p-8 border-t border-slate-50 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/10">
+        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6">
           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
             Total funcionarios: <span className="text-slate-900">{filteredFuncionarios.length}</span>
           </p>
@@ -324,7 +363,7 @@ export const Funcionarios: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <button 
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
@@ -380,7 +419,7 @@ export const Funcionarios: React.FC = () => {
                   <input 
                     {...register('nombre')}
                     className={cn(
-                      "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green",
+                      "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green text-slate-900",
                       errors.nombre && "border-brand-red"
                     )}
                     placeholder="Ej: Yordan Solis"
@@ -393,7 +432,7 @@ export const Funcionarios: React.FC = () => {
                   <input 
                     {...register('email')}
                     className={cn(
-                      "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green",
+                      "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green text-slate-900",
                       errors.email && "border-brand-red"
                     )}
                     placeholder="correo@ejemplo.com"
@@ -408,7 +447,7 @@ export const Funcionarios: React.FC = () => {
                       {...register('password')}
                       type={showPassword ? "text" : "password"}
                       className={cn(
-                        "w-full pl-4 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green",
+                        "w-full pl-4 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green text-slate-900",
                         errors.password && "border-brand-red"
                       )}
                       placeholder="••••••••"
@@ -429,7 +468,7 @@ export const Funcionarios: React.FC = () => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Teléfono</label>
                   <input 
                     {...register('telefono')}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green text-slate-900"
                     placeholder="311..."
                   />
                 </div>
@@ -438,7 +477,7 @@ export const Funcionarios: React.FC = () => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Rol</label>
                   <select 
                     {...register('rol')}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green text-slate-900"
                   >
                     <option value="funcionario">Funcionario</option>
                     <option value="admin">Administrador</option>
@@ -449,7 +488,7 @@ export const Funcionarios: React.FC = () => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Secretaría</label>
                   <select 
                     {...register('secretaría')}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green text-slate-900"
                   >
                     <option value="">Seleccione secretaría...</option>
                     {secretarias.map(s => <option key={s} value={s}>{s}</option>)}
@@ -461,7 +500,7 @@ export const Funcionarios: React.FC = () => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Línea de Trabajo</label>
                   <select 
                     {...register('linea_trabajo')}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green text-slate-900"
                   >
                     <option value="">Seleccione línea...</option>
                     {lineas.map(l => <option key={l._id} value={l._id}>{l.nombre}</option>)}
@@ -473,7 +512,7 @@ export const Funcionarios: React.FC = () => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Estado</label>
                   <select 
                     {...register('estado')}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green text-slate-900"
                   >
                     <option value="Activo">Activo</option>
                     <option value="Inactivo">Inactivo</option>
@@ -527,6 +566,50 @@ export const Funcionarios: React.FC = () => {
                   Eliminar
                 </button>
               </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Success/Notification Modal */}
+      <Dialog.Root open={!!successModal?.isOpen} onOpenChange={(open) => {
+        if (!open) setSuccessModal(null);
+      }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-[32px] shadow-2xl z-[101] overflow-hidden outline-none p-8 text-center space-y-6">
+            <div className={cn(
+              "w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-inner",
+              successModal?.type === 'success' ? "bg-emerald-50 text-brand-green" : "bg-red-50 text-brand-red"
+            )}>
+              {successModal?.type === 'success' ? (
+                <CheckCircle2 size={36} className="animate-pulse" />
+              ) : (
+                <AlertCircle size={36} className="animate-bounce" />
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Dialog.Title className="text-xl font-display font-black text-slate-800 uppercase tracking-tight">
+                {successModal?.title}
+              </Dialog.Title>
+              <Dialog.Description className="text-xs text-slate-500 font-semibold leading-relaxed">
+                {successModal?.message}
+              </Dialog.Description>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setSuccessModal(null)}
+                className={cn(
+                  "w-full py-3 text-white rounded-xl font-bold uppercase text-xs tracking-widest transition-all cursor-pointer",
+                  successModal?.type === 'success' 
+                    ? "bg-brand-green hover:bg-emerald-700 shadow-md shadow-brand-green/20" 
+                    : "bg-brand-red hover:bg-red-700 shadow-md shadow-brand-red/20"
+                )}
+              >
+                Aceptar
+              </button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>

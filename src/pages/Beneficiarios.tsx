@@ -33,6 +33,12 @@ export const ListadoBeneficiarios: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [errorToast, setErrorToast] = useState<string | null>(null);
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
 
   // Export State Variables
   const [exportType, setExportType] = useState<'todos' | 'rango'>('todos');
@@ -438,21 +444,36 @@ export const ListadoBeneficiarios: React.FC = () => {
   const handleDelete = async () => {
     if (!deleteId) return;
     if (user?.rol !== 'admin') {
-      setErrorToast('No tiene permisos administrativos para realizar esta acción.');
+      setSuccessModal({
+        isOpen: true,
+        title: 'Error de Permisos',
+        message: 'No tienes permisos administrativos para realizar esta acción.',
+        type: 'error'
+      });
       setDeleteId(null);
-      setTimeout(() => setErrorToast(null), 4000);
       return;
     }
     try {
+      const beneficiario = beneficiarios.find(b => b._id === deleteId);
+      const nombreCompleto = beneficiario ? (beneficiario.nombre_completo || beneficiario.nombre) : 'El beneficiario';
       await api.delete(`/beneficiarios/${deleteId}`);
       fetchBeneficiarios();
       setDeleteId(null);
-      setSuccessToast('¡El registro del beneficiario ha sido eliminado exitosamente del censo municipal!');
-      setTimeout(() => setSuccessToast(null), 4000);
+      setSuccessModal({
+        isOpen: true,
+        title: 'Eliminación Exitosa',
+        message: `El registro de "${nombreCompleto}" ha sido eliminado exitosamente de la base de datos de manera definitiva.`,
+        type: 'success'
+      });
     } catch (error) {
       console.error('Error deleting:', error);
-      setErrorToast('Ocurrió un error inesperado al intentar remover este beneficiario.');
-      setTimeout(() => setErrorToast(null), 4000);
+      setDeleteId(null);
+      setSuccessModal({
+        isOpen: true,
+        title: 'Error al Eliminar',
+        message: 'Ocurrió un error inesperado al intentar remover este beneficiario.',
+        type: 'error'
+      });
     }
   };
 
@@ -620,8 +641,8 @@ export const ListadoBeneficiarios: React.FC = () => {
         </div>
         
         {/* Pagination */}
-        <div className="p-6 border-t border-slate-50 flex items-center justify-between bg-slate-50/30">
-          <div className="flex items-center gap-6">
+        <div className="p-6 border-t border-slate-50 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/30">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
               Población total registrada: <span className="text-slate-900">{totalRecords}</span>
             </p>
@@ -640,7 +661,7 @@ export const ListadoBeneficiarios: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <button 
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
@@ -912,6 +933,50 @@ export const ListadoBeneficiarios: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Success/Notification Modal */}
+      <Dialog.Root open={!!successModal?.isOpen} onOpenChange={(open) => {
+        if (!open) setSuccessModal(null);
+      }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-[32px] shadow-2xl z-[101] overflow-hidden outline-none p-8 text-center space-y-6">
+            <div className={cn(
+              "w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-inner",
+              successModal?.type === 'success' ? "bg-emerald-50 text-brand-green" : "bg-red-50 text-brand-red"
+            )}>
+              {successModal?.type === 'success' ? (
+                <CheckCircle2 size={36} className="animate-pulse" />
+              ) : (
+                <AlertCircle size={36} className="animate-bounce" />
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Dialog.Title className="text-xl font-display font-black text-slate-800 uppercase tracking-tight">
+                {successModal?.title}
+              </Dialog.Title>
+              <Dialog.Description className="text-xs text-slate-500 font-semibold leading-relaxed">
+                {successModal?.message}
+              </Dialog.Description>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setSuccessModal(null)}
+                className={cn(
+                  "w-full py-3 text-white rounded-xl font-bold uppercase text-xs tracking-widest transition-all cursor-pointer",
+                  successModal?.type === 'success' 
+                    ? "bg-brand-green hover:bg-emerald-700 shadow-md shadow-brand-green/20" 
+                    : "bg-brand-red hover:bg-red-700 shadow-md shadow-brand-red/20"
+                )}
+              >
+                Aceptar
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 };

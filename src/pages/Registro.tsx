@@ -1030,7 +1030,7 @@ const InputField = React.forwardRef(({ label, error, className, ...props }: any,
       ref={ref}
       {...props}
       className={cn(
-        "w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-brand-green outline-none transition-all placeholder:text-slate-300",
+        "w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-brand-green outline-none transition-all placeholder:text-slate-300 text-slate-900",
         error && "border-brand-red ring-brand-red/20"
       )}
     />
@@ -1047,7 +1047,7 @@ const SelectField = React.forwardRef(({ label, className, children, error, ...pr
       ref={ref}
       {...props}
       className={cn(
-        "w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-brand-green outline-none transition-all appearance-none cursor-pointer",
+        "w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-brand-green outline-none transition-all appearance-none cursor-pointer text-slate-900",
         error && "border-brand-red ring-brand-red/20"
       )}
     >

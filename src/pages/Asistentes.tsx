@@ -74,6 +74,13 @@ export default function Asistentes() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState<string>('');
   
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
+  
   // Form State
   const [formData, setFormData] = useState({
     nombre_completo: '',
@@ -278,17 +285,31 @@ export default function Asistentes() {
     try {
       if (editId) {
         await api.put(`/asistente/${editId}`, payload);
-        setSuccessMsg('¡Asistente actualizado con éxito!');
+        setSuccessModal({
+          isOpen: true,
+          title: 'Asistente Actualizado',
+          message: `La información de participación de "${formData.nombre_completo}" ha sido actualizada con éxito.`,
+          type: 'success'
+        });
       } else {
         await api.post('/asistente', payload);
-        setSuccessMsg('¡Asistente registrado con éxito!');
+        setSuccessModal({
+          isOpen: true,
+          title: 'Asistente Registrado',
+          message: `El registro de asistencia para "${formData.nombre_completo}" ha sido guardado e incorporado con éxito.`,
+          type: 'success'
+        });
       }
       setShowModal(false);
       fetchAsistentes();
-      setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err: any) {
       console.error('Error submitting assistant:', err);
-      setErrorMsg(err.response?.data?.error || 'Error al guardar los datos del asistente.');
+      setSuccessModal({
+        isOpen: true,
+        title: 'Error de Registro',
+        message: err.response?.data?.error || 'Ocurrió un error inesperado al intentar registrar los datos del asistente. Intente nuevamente.',
+        type: 'error'
+      });
     }
   };
 
@@ -571,8 +592,8 @@ export default function Asistentes() {
             </table>
 
             {/* Pagination */}
-            <div className="p-6 border-t border-slate-150 flex items-center justify-between bg-slate-50/30">
-              <div className="flex items-center gap-6">
+            <div className="p-6 border-t border-slate-150 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/30">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                   Asistentes totales: <span className="text-slate-900">{filteredAsistentes.length}</span>
                 </p>
@@ -595,7 +616,7 @@ export default function Asistentes() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
@@ -904,22 +925,69 @@ export default function Asistentes() {
                 type="button"
                 onClick={async () => {
                   const id = deleteConfirmId;
+                  const targetName = deleteConfirmName || 'El asistente';
                   setDeleteConfirmId(null);
                   setDeleteConfirmName('');
                   try {
                     await api.delete(`/asistente/${id}`);
-                    setSuccessMsg('Asistente eliminado con éxito');
                     fetchAsistentes();
-                    setTimeout(() => setSuccessMsg(''), 4000);
+                    setSuccessModal({
+                      isOpen: true,
+                      title: 'Eliminación Exitosa',
+                      message: `El registro de participación del asistente "${targetName}" ha sido eliminado exitosamente.`,
+                      type: 'success'
+                    });
                   } catch (err: any) {
                     console.error('Error deleting asistente:', err);
-                    setErrorMsg('Error al eliminar el asistente.');
-                    setTimeout(() => setErrorMsg(''), 4005);
+                    setSuccessModal({
+                      isOpen: true,
+                      title: 'Error de Eliminación',
+                      message: 'Ocurrió un error inesperado al intentar eliminar al asistente.',
+                      type: 'error'
+                    });
                   }
                 }}
                 className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md shadow-rose-600/15"
               >
                 Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {successModal?.isOpen && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-[150] animate-fade-in">
+          <div className="bg-white rounded-[32px] shadow-2xl border border-slate-100 max-w-sm w-full p-8 text-center space-y-6 transform scale-100 transition-all duration-300">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-inner ${
+              successModal.type === 'success' ? "bg-emerald-50 text-[#00a859]" : "bg-red-50 text-red-500"
+            }`}>
+              {successModal.type === 'success' ? (
+                <CheckCircle2 size={36} className="animate-pulse" />
+              ) : (
+                <AlertCircle size={36} className="animate-bounce" />
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-xl font-display font-black text-slate-800 uppercase tracking-tight">
+                {successModal.title}
+              </h3>
+              <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                {successModal.message}
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setSuccessModal(null)}
+                className={`w-full py-3 text-white rounded-xl font-bold uppercase text-xs tracking-widest transition-all cursor-pointer ${
+                  successModal.type === 'success' 
+                    ? "bg-[#00a859] hover:bg-emerald-700 shadow-md shadow-[#00a859]/20" 
+                    : "bg-red-600 hover:bg-red-700 shadow-md shadow-red-600/20"
+                }`}
+              >
+                Aceptar
               </button>
             </div>
           </div>

@@ -10,7 +10,8 @@ import {
   Save,
   ChevronLeft,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { cn } from '../lib/utils';
@@ -47,6 +48,12 @@ export const Comunas: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema)
@@ -72,8 +79,20 @@ export const Comunas: React.FC = () => {
     try {
       if (editingId) {
         await api.put(`/comunas/${editingId}`, data);
+        setSuccessModal({
+          isOpen: true,
+          title: 'Actualización Exitosa',
+          message: `La comuna "${data.nombre}" ha sido modificada correctamente.`,
+          type: 'success'
+        });
       } else {
         await api.post('/comunas', data);
+        setSuccessModal({
+          isOpen: true,
+          title: 'Registro Completo',
+          message: `La comuna "${data.nombre}" ha sido creada exitosamente.`,
+          type: 'success'
+        });
       }
       setIsFormOpen(false);
       reset();
@@ -81,7 +100,12 @@ export const Comunas: React.FC = () => {
       fetchComunas();
     } catch (error) {
       console.error('Error saving comuna:', error);
-      alert('Error al guardar la comuna.');
+      setSuccessModal({
+        isOpen: true,
+        title: 'Error de Guardado',
+        message: 'No se pudo guardar la comuna en el servidor. Por favor, intente nuevamente.',
+        type: 'error'
+      });
     }
   };
 
@@ -97,12 +121,26 @@ export const Comunas: React.FC = () => {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
+      const comuna = comunas.find(c => c._id === deleteId);
+      const nombreEliminado = comuna ? comuna.nombre : 'La comuna';
       await api.delete(`/comunas/${deleteId}`);
       setDeleteId(null);
       fetchComunas();
+      setSuccessModal({
+        isOpen: true,
+        title: 'Eliminación Exitosa',
+        message: `La comuna "${nombreEliminado}" ha sido eliminada del sistema.`,
+        type: 'success'
+      });
     } catch (error) {
       console.error('Error deleting:', error);
-      alert('Error al eliminar la comuna.');
+      setDeleteId(null);
+      setSuccessModal({
+        isOpen: true,
+        title: 'Error al Eliminar',
+        message: 'Ocurrió un error en el servidor al intentar eliminar la comuna.',
+        type: 'error'
+      });
     }
   };
 
@@ -163,7 +201,7 @@ export const Comunas: React.FC = () => {
               reset({ nombre: '', zona: '' });
               setIsFormOpen(true);
             }}
-            className="flex items-center gap-2 px-8 py-3.5 bg-brand-blue text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-brand-blue/20 shrink-0"
+            className="flex items-center gap-2 px-8 py-3.5 bg-brand-green text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-brand-green/20 shrink-0"
           >
             <Plus size={18} strokeWidth={3} />
             Crear Nueva Comuna
@@ -188,13 +226,13 @@ export const Comunas: React.FC = () => {
                 <div key={comuna._id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-md transition-all">
                   <div className="p-6 flex-1">
                     <div className="flex items-start justify-between mb-4">
-                      <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-brand-blue/10 group-hover:text-brand-blue transition-colors">
+                      <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-brand-green/10 group-hover:text-brand-green transition-colors">
                         <MapPin size={24} />
                       </div>
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => handleEdit(comuna)}
-                          className="p-2 text-brand-blue hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-brand-green hover:bg-emerald-50 rounded-lg transition-colors"
                         >
                           <Pencil size={16} />
                         </button>
@@ -209,7 +247,7 @@ export const Comunas: React.FC = () => {
                     
                     <h3 className="text-lg font-bold text-slate-800 mb-1">{comuna.nombre}</h3>
                     <div className="flex items-start gap-2">
-                      <Building2 size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
+                       <Building2 size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
                       <p className="text-sm text-slate-500 font-medium leading-tight">{comuna.zona}</p>
                     </div>
                   </div>
@@ -217,7 +255,7 @@ export const Comunas: React.FC = () => {
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sector Territorial</span>
                     <button 
                       onClick={() => handleEdit(comuna)}
-                      className="text-[10px] font-bold text-brand-blue uppercase hover:underline"
+                      className="text-[10px] font-bold text-brand-green uppercase hover:underline"
                     >
                       Ver Detalles
                     </button>
@@ -229,8 +267,8 @@ export const Comunas: React.FC = () => {
         </div>
 
         {/* Pagination */}
-        <div className="p-6 border-t border-slate-50 flex items-center justify-between bg-slate-50/30">
-          <div className="flex items-center gap-6">
+        <div className="p-6 border-t border-slate-50 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/30">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
               Total sectores: <span className="text-slate-900">{filteredComunas.length}</span>
             </p>
@@ -248,7 +286,7 @@ export const Comunas: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <button 
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
@@ -281,7 +319,7 @@ export const Comunas: React.FC = () => {
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100]" />
           <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-[40px] shadow-2xl z-[101] overflow-hidden outline-none">
-            <div className="bg-brand-blue p-10 flex items-center justify-between">
+            <div className="bg-brand-green p-10 flex items-center justify-between">
               <Dialog.Title className="text-2xl font-display font-black text-white">
                 {editingId ? 'Editar Comuna' : 'Crear Nueva Comuna'}
               </Dialog.Title>
@@ -301,7 +339,7 @@ export const Comunas: React.FC = () => {
                 <input 
                   {...register('nombre')}
                   className={cn(
-                    "w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold outline-none focus:border-brand-green focus:bg-white transition-all",
+                    "w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold outline-none focus:border-brand-green focus:bg-white transition-all text-slate-900",
                     errors.nombre && "border-red-200 focus:border-brand-red"
                   )}
                   placeholder="Ej: Comuna 1"
@@ -314,7 +352,7 @@ export const Comunas: React.FC = () => {
                 <input 
                   {...register('zona')}
                   className={cn(
-                    "w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold outline-none focus:border-brand-green focus:bg-white transition-all",
+                    "w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold outline-none focus:border-brand-green focus:bg-white transition-all text-slate-900",
                     errors.zona && "border-red-200 focus:border-brand-red"
                   )}
                   placeholder="Ej: Zona Norte - Barrios..."
@@ -369,6 +407,50 @@ export const Comunas: React.FC = () => {
                   Sí, Eliminar
                 </button>
               </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Success/Notification Modal */}
+      <Dialog.Root open={!!successModal?.isOpen} onOpenChange={(open) => {
+        if (!open) setSuccessModal(null);
+      }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-[32px] shadow-2xl z-[101] overflow-hidden outline-none p-8 text-center space-y-6">
+            <div className={cn(
+              "w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-inner",
+              successModal?.type === 'success' ? "bg-emerald-50 text-brand-green" : "bg-red-50 text-brand-red"
+            )}>
+              {successModal?.type === 'success' ? (
+                <CheckCircle2 size={36} className="animate-pulse" />
+              ) : (
+                <AlertCircle size={36} className="animate-bounce" />
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Dialog.Title className="text-xl font-display font-black text-slate-800 uppercase tracking-tight">
+                {successModal?.title}
+              </Dialog.Title>
+              <Dialog.Description className="text-xs text-slate-500 font-semibold leading-relaxed">
+                {successModal?.message}
+              </Dialog.Description>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setSuccessModal(null)}
+                className={cn(
+                  "w-full py-3 text-white rounded-xl font-bold uppercase text-xs tracking-widest transition-all cursor-pointer",
+                  successModal?.type === 'success' 
+                    ? "bg-brand-green hover:bg-emerald-700 shadow-md shadow-brand-green/20" 
+                    : "bg-brand-red hover:bg-red-700 shadow-md shadow-brand-red/20"
+                )}
+              >
+                Aceptar
+              </button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>

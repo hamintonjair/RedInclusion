@@ -683,7 +683,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                           required
                           value={nombreCompleto}
                           onChange={(e) => setNombreCompleto(e.target.value)}
-                          className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-display text-slate-800 focus:outline-none focus:border-brand-green focus:bg-white transition-all shadow-sm"
+                          className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-display text-slate-900 focus:outline-none focus:border-brand-green focus:bg-white transition-all shadow-sm"
                         />
                       </div>
 
@@ -695,7 +695,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                           required
                           value={correo}
                           onChange={(e) => setCorreo(e.target.value)}
-                          className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-display text-slate-800 focus:outline-none focus:border-brand-green focus:bg-white transition-all shadow-sm"
+                          className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-display text-slate-900 focus:outline-none focus:border-brand-green focus:bg-white transition-all shadow-sm"
                         />
                       </div>
 
@@ -708,7 +708,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                           disabled={user?.rol === 'funcionario'}
                           className={cn(
                             "w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-display transition-all shadow-sm h-10",
-                            user?.rol === 'funcionario' ? "opacity-70 cursor-not-allowed bg-slate-100 text-slate-500" : "text-slate-1000 focus:outline-none focus:border-brand-green focus:bg-white cursor-pointer"
+                            user?.rol === 'funcionario' ? "opacity-70 cursor-not-allowed bg-slate-100 text-slate-500" : "text-slate-900 focus:outline-none focus:border-brand-green focus:bg-white cursor-pointer"
                           )}
                         >
                           <option value="">Seleccione secretaría...</option>
@@ -738,7 +738,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                             disabled={user?.rol === 'funcionario'}
                             className={cn(
                               "w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold font-display transition-all shadow-sm h-10",
-                              user?.rol === 'funcionario' ? "opacity-70 cursor-not-allowed bg-slate-100 text-slate-500" : "text-slate-1000 focus:outline-none focus:border-brand-green focus:bg-white cursor-pointer"
+                              user?.rol === 'funcionario' ? "opacity-70 cursor-not-allowed bg-slate-100 text-slate-500" : "text-slate-900 focus:outline-none focus:border-brand-green focus:bg-white cursor-pointer"
                             )}
                           >
                             {(lineasDisponibles.length > 0

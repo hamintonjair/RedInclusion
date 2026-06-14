@@ -47,12 +47,18 @@ export const LineasTrabajo: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema)
   });
 
-    const fetchLineas = async () => {
+  const fetchLineas = async () => {
     setLoading(true);
     try {
       const response = await api.get('/lineas');
@@ -72,8 +78,20 @@ export const LineasTrabajo: React.FC = () => {
     try {
       if (editingId) {
         await api.put(`/lineas/${editingId}`, data);
+        setSuccessModal({
+          isOpen: true,
+          title: 'Actualización Exitosa',
+          message: `La línea de trabajo "${data.nombre}" ha sido actualizada correctamente.`,
+          type: 'success'
+        });
       } else {
         await api.post('/lineas', data);
+        setSuccessModal({
+          isOpen: true,
+          title: 'Registro Completo',
+          message: `La línea de trabajo "${data.nombre}" ha sido creada exitosamente.`,
+          type: 'success'
+        });
       }
       setIsFormOpen(false);
       reset();
@@ -81,7 +99,12 @@ export const LineasTrabajo: React.FC = () => {
       fetchLineas();
     } catch (error) {
       console.error('Error saving linea:', error);
-      alert('Error al guardar la línea de trabajo.');
+      setSuccessModal({
+        isOpen: true,
+        title: 'Error al Guardar',
+        message: 'No fue posible guardar la línea de trabajo debido a un error con el servidor.',
+        type: 'error'
+      });
     }
   };
 
@@ -95,12 +118,26 @@ export const LineasTrabajo: React.FC = () => {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
+      const linea = lineas.find(l => l._id === deleteId);
+      const nombreEliminado = linea ? linea.nombre : 'La línea de trabajo';
       await api.delete(`/lineas/${deleteId}`);
       setDeleteId(null);
       fetchLineas();
+      setSuccessModal({
+        isOpen: true,
+        title: 'Eliminación Exitosa',
+        message: `La línea de trabajo "${nombreEliminado}" ha sido eliminada del sistema.`,
+        type: 'success'
+      });
     } catch (error) {
       console.error('Error deleting:', error);
-      alert('Error al eliminar la línea de trabajo.');
+      setDeleteId(null);
+      setSuccessModal({
+        isOpen: true,
+        title: 'Error al Eliminar',
+        message: 'Ocurrió un error en el servidor al intentar eliminar la línea de trabajo.',
+        type: 'error'
+      });
     }
   };
 
@@ -221,8 +258,8 @@ export const LineasTrabajo: React.FC = () => {
       </div>
 
       {/* Pagination */}
-      <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between">
-        <div className="flex items-center gap-6">
+      <div className="mt-8 pt-8 border-t border-slate-50 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6">
           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
             Total líneas: <span className="text-slate-900">{filteredLineas.length}</span>
           </p>
@@ -240,7 +277,7 @@ export const LineasTrabajo: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <button 
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
@@ -294,7 +331,7 @@ export const LineasTrabajo: React.FC = () => {
                 <input 
                   {...register('nombre')}
                   className={cn(
-                    "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green transition-all",
+                    "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green transition-all text-slate-900",
                     errors.nombre && "border-brand-red focus:ring-brand-red"
                   )}
                   placeholder="Ej: Personas con Discapacidad"
@@ -308,7 +345,7 @@ export const LineasTrabajo: React.FC = () => {
                   {...register('descripcion')}
                   rows={3}
                   className={cn(
-                    "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green transition-all resize-none",
+                    "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green transition-all resize-none text-slate-900",
                     errors.descripcion && "border-brand-red focus:ring-brand-red"
                   )}
                   placeholder="Detalla de qué trata esta línea..."
@@ -364,6 +401,50 @@ export const LineasTrabajo: React.FC = () => {
                   Eliminar
                 </button>
               </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Success/Notification Modal */}
+      <Dialog.Root open={!!successModal?.isOpen} onOpenChange={(open) => {
+        if (!open) setSuccessModal(null);
+      }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-[32px] shadow-2xl z-[101] overflow-hidden outline-none p-8 text-center space-y-6">
+            <div className={cn(
+              "w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-inner",
+              successModal?.type === 'success' ? "bg-emerald-50 text-brand-green" : "bg-red-50 text-brand-red"
+            )}>
+              {successModal?.type === 'success' ? (
+                <CheckCircle2 size={36} className="animate-pulse" />
+              ) : (
+                <AlertCircle size={36} className="animate-bounce" />
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Dialog.Title className="text-xl font-display font-black text-slate-800 uppercase tracking-tight">
+                {successModal?.title}
+              </Dialog.Title>
+              <Dialog.Description className="text-xs text-slate-500 font-semibold leading-relaxed">
+                {successModal?.message}
+              </Dialog.Description>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setSuccessModal(null)}
+                className={cn(
+                  "w-full py-3 text-white rounded-xl font-bold uppercase text-xs tracking-widest transition-all cursor-pointer",
+                  successModal?.type === 'success' 
+                    ? "bg-brand-green hover:bg-emerald-700 shadow-md shadow-brand-green/20" 
+                    : "bg-brand-red hover:bg-red-700 shadow-md shadow-brand-red/20"
+                )}
+              >
+                Aceptar
+              </button>
             </div>
           </Dialog.Content>
         </Dialog.Portal>

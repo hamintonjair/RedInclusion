@@ -183,6 +183,12 @@ export default function Actividades() {
   const [actividades, setActividades] = useState<any[]>([]);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [errorToast, setErrorToast] = useState<string | null>(null);
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
@@ -239,6 +245,7 @@ export default function Actividades() {
   
   // Beneficiarios for assistant selection
   const [allBeneficiarios, setAllBeneficiarios] = useState<any[]>([]);
+  const [allAsistentes, setAllAsistentes] = useState<any[]>([]);
   const [lineas, setLineas] = useState<any[]>([]);
   const [assistantSearch, setAssistantSearch] = useState('');
   const [assistantDateFilter, setAssistantDateFilter] = useState('');
@@ -292,6 +299,23 @@ export default function Actividades() {
     }
   };
 
+  const fetchAsistentes = async () => {
+    try {
+      const res = await api.get('/asistente');
+      let data = res.data || [];
+      if (!Array.isArray(data)) data = [];
+      const normalized = data.map((item: any) => ({
+        ...item,
+        nombre_completo: item.nombre_completo || item.nombre || '',
+        tipo_documento: item.tipo_documento || 'Cédula',
+        numero_documento: item.cedula || item.numero_documento || item.documento || '',
+      }));
+      setAllAsistentes(normalized);
+    } catch (err) {
+      console.error('Error fetching asistentes:', err);
+    }
+  };
+
   const fetchLineas = async () => {
     try {
       const res = await api.get('/lineas');
@@ -319,6 +343,7 @@ export default function Actividades() {
     fetchActividades();
     fetchBeneficiarios();
     fetchLineas();
+    fetchAsistentes();
   }, []);
 
   // Sync default line of work when user or lines are loaded
@@ -367,39 +392,46 @@ export default function Actividades() {
 
       if (editingId) {
         await api.put(`/actividades/${editingId}`, activityPayload);
-        setSuccess('¡Actividad actualizada con éxito!');
-        setSuccessToast('¡La actividad/reunión ha sido actualizada exitosamente en la base de datos municipal!');
+        setSuccessModal({
+          isOpen: true,
+          title: 'Actualización Exitosa',
+          message: '¡La actividad/reunión ha sido actualizada de manera formal y guardada en el servidor municipal!',
+          type: 'success'
+        });
       } else {
         await api.post('/actividades', activityPayload);
-        setSuccess('¡Actividad registrada con éxito!');
-        setSuccessToast('¡La actividad/reunión ha sido creada e incorporada al cronograma oficial!');
-      }
-      setTimeout(() => setSuccessToast(null), 4000);
-      
-      // Reset after 1.5s
-      setTimeout(() => {
-        setFormData({
-          tema: '',
-          objetivo: '',
-          lugar: '',
-          dependencia: 'Secretaría de Inclusión y Cohesión Social',
-          fecha: new Date().toISOString().split('T')[0],
-          horaInicio: '08:00',
-          horaFin: '10:00',
-          lineaTrabajo: formData.lineaTrabajo,
-          tipo: 'Actividad'
+        setSuccessModal({
+          isOpen: true,
+          title: 'Registro Exitoso',
+          message: '¡La actividad/reunión ha sido creada e incorporada de forma exitosa al cronograma oficial municipal!',
+          type: 'success'
         });
-        setSelectedAssistants([]);
-        setEditingId(null);
-        setViewMode('list');
-        fetchActividades();
-      }, 1500);
+      }
+
+      setFormData({
+        tema: '',
+        objetivo: '',
+        lugar: '',
+        dependencia: 'Secretaría de Inclusión y Cohesión Social',
+        fecha: new Date().toISOString().split('T')[0],
+        horaInicio: '08:00',
+        horaFin: '10:00',
+        lineaTrabajo: formData.lineaTrabajo,
+        tipo: 'Actividad'
+      });
+      setSelectedAssistants([]);
+      setEditingId(null);
+      setViewMode('list');
+      fetchActividades();
 
     } catch (err) {
       console.error('Error saving activity:', err);
-      setError('Hubo un error al guardar. Reintente.');
-      setErrorToast('Hubo un error al procesar la solicitud del formulario. Por favor verifique los datos.');
-      setTimeout(() => setErrorToast(null), 4000);
+      setSuccessModal({
+        isOpen: true,
+        title: 'Error de Guardado',
+        message: 'Hubo un error al intentar guardar la información de la actividad. Verifique la conexión.',
+        type: 'error'
+      });
     }
   };
 
@@ -421,17 +453,21 @@ export default function Actividades() {
 
     // We need to resolve 'asistentes' properly
     let resolvedAssistants = [];
+    const isMeeting = (act.tipo || '').toLowerCase().includes('reun');
     if (act.asistentes_detalles && act.asistentes_detalles.length > 0) {
       resolvedAssistants = act.asistentes_detalles.map((a: any) => {
-        // try to find full object from allBeneficiarios
         const idToSearch = a.beneficiario_id || a._id;
-        const full = allBeneficiarios.find(b => b._id === idToSearch || b.id === idToSearch);
+        const full = isMeeting 
+          ? (allAsistentes.find(b => b._id === idToSearch || b.id === idToSearch) || allBeneficiarios.find(b => b._id === idToSearch || b.id === idToSearch))
+          : (allBeneficiarios.find(b => b._id === idToSearch || b.id === idToSearch) || allAsistentes.find(b => b._id === idToSearch || b.id === idToSearch));
         return full || a;
       });
     } else if (act.asistentes && act.asistentes.length > 0) {
       resolvedAssistants = act.asistentes.map((aId: string | any) => {
         const idToSearch = typeof aId === 'object' ? (aId.beneficiario_id || aId._id) : aId;
-        const full = allBeneficiarios.find(b => b._id === idToSearch || b.id === idToSearch);
+        const full = isMeeting 
+          ? (allAsistentes.find(b => b._id === idToSearch || b.id === idToSearch) || allBeneficiarios.find(b => b._id === idToSearch || b.id === idToSearch))
+          : (allBeneficiarios.find(b => b._id === idToSearch || b.id === idToSearch) || allAsistentes.find(b => b._id === idToSearch || b.id === idToSearch));
         return full || { _id: idToSearch };
       });
     }
@@ -446,18 +482,28 @@ export default function Actividades() {
 
   const executeDelete = async (id: string) => {
     try {
+      const act = actividades.find(a => a._id === id);
+      const actName = act ? (act.tema || act.nombre) : 'La actividad';
       await api.delete(`/actividades/${id}`);
       if (selectedActDetail?._id === id) {
         setViewMode('list');
         setSelectedActDetail(null);
       }
       fetchActividades();
-      setSuccessToast('¡La actividad o reunión ha sido eliminada del registro de forma definitiva!');
-      setTimeout(() => setSuccessToast(null), 4000);
+      setSuccessModal({
+        isOpen: true,
+        title: 'Eliminación Exitosa',
+        message: `La actividad/reunión "${actName}" y sus registros de participación han sido eliminados del registro de forma definitiva.`,
+        type: 'success'
+      });
     } catch (err) {
       console.error('Error deleting activity:', err);
-      setErrorToast('Hubo un error al intentar eliminar el registro de la actividad.');
-      setTimeout(() => setErrorToast(null), 4000);
+      setSuccessModal({
+        isOpen: true,
+        title: 'Error de Eliminación',
+        message: 'Hubo un error inesperado al intentar eliminar el registro de la actividad.',
+        type: 'error'
+      });
     }
   };
 
@@ -725,7 +771,7 @@ export default function Actividades() {
       const isObject = typeof asistenteItem === 'object' && asistenteItem !== null;
       const idValue = isObject ? (asistenteItem.beneficiario_id || asistenteItem._id) : asistenteItem;
       
-      let b = allBeneficiarios.find(b => b._id === idValue || b.id === idValue);
+      let b = allBeneficiarios.find(b => b._id === idValue || b.id === idValue) || allAsistentes.find(b => b._id === idValue || b.id === idValue);
       
       let nombre = b?.nombre_completo || b?.nombre;
       let doc = b?.numero_documento || b?.cedula;
@@ -1186,7 +1232,7 @@ export default function Actividades() {
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-slate-950/60 backdrop-blur-[4px] z-[150] transition-all" />
           <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-[32px] shadow-2xl z-[151] overflow-hidden outline-none border border-slate-100 flex flex-col max-h-[85vh] animate-scaleIn">
-            <div className="bg-[#0072B1] p-6 text-white flex items-center justify-between shrink-0">
+            <div className="bg-brand-green p-6 text-white flex items-center justify-between shrink-0">
               <Dialog.Title className="text-lg font-display font-black uppercase tracking-wide">Seleccionar columnas para exportar</Dialog.Title>
               <Dialog.Close asChild>
                 <button className="text-white/80 hover:text-white transition-colors cursor-pointer outline-none">
@@ -1204,18 +1250,18 @@ export default function Actividades() {
                   placeholder="Buscar columnas..."
                   value={exportColumnsSearch}
                   onChange={(e) => setExportColumnsSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0072B1] focus:bg-white transition-all outline-none animate-fadeIn"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-green focus:bg-white transition-all outline-none animate-fadeIn"
                 />
               </div>
 
-              {/* Select All Toggle */}
+               {/* Select All Toggle */}
               <div className="border-b border-slate-100 pb-2">
                 <button
                   onClick={toggleAllColumns}
                   className="flex items-center gap-2.5 py-1.5 px-2 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors text-xs font-black uppercase tracking-wider cursor-pointer"
                 >
-                  <div className="w-5 h-5 rounded border border-[#0072B1] bg-blue-50/50 flex items-center justify-center text-[#0072B1] relative transition-all">
-                    <span className="w-2.5 h-0.5 bg-[#0072B1] rounded-sm"></span>
+                  <div className="w-5 h-5 rounded border border-brand-green bg-emerald-50/50 flex items-center justify-center text-brand-green relative transition-all">
+                    <span className="w-2.5 h-0.5 bg-brand-green rounded-sm"></span>
                   </div>
                   {allMarked ? 'Desmarcar todas' : 'Marcar todas'}
                 </button>
@@ -1237,7 +1283,7 @@ export default function Actividades() {
                     <div className={cn(
                       "w-5 h-5 rounded border flex items-center justify-center transition-all shrink-0",
                       selectedColumns[col.key]
-                        ? "bg-[#0072B1] border-[#0072B1] text-white"
+                        ? "bg-brand-green border-brand-green text-white"
                         : "border-slate-300 bg-white group-hover:border-slate-400"
                     )}>
                       {selectedColumns[col.key] && (
@@ -1267,7 +1313,7 @@ export default function Actividades() {
               </button>
               <button
                 onClick={handleGenerateExcel}
-                className="flex-1 py-3.5 bg-[#0072B1] hover:bg-[#005a8e] text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 cursor-pointer"
+                className="flex-1 py-3.5 bg-brand-green hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-brand-green/20 cursor-pointer"
               >
                 Generar Excel
               </button>
@@ -1315,10 +1361,11 @@ export default function Actividades() {
   }, [filteredActividades, currentPageActividades, actividadesPerPage]);
 
   const availableAssistants = useMemo(() => {
-    let list = [...allBeneficiarios];
+    const isMeeting = viewMode === 'meeting' || formData.tipo === 'Reunión';
+    let list = isMeeting ? [...allAsistentes] : [...allBeneficiarios];
     
-    // Filter by line if Nueva Actividad or Nueva Reunión
-    if ((viewMode === 'activity' || viewMode === 'meeting') && user?.lineaTrabajo && user.rol !== 'admin') {
+    // Filter by line if Nueva Actividad
+    if (!isMeeting && viewMode === 'activity' && user?.lineaTrabajo && user.rol !== 'admin') {
       const userLineId = user.lineaTrabajo;
       list = list.filter(b => b.linea_trabajo === userLineId || b.linea_nombre === userLineId);
     }
@@ -1339,7 +1386,7 @@ export default function Actividades() {
 
     // Sort: selected first
     return list;
-  }, [allBeneficiarios, viewMode, user, assistantSearch, assistantDateFilter]);
+  }, [allBeneficiarios, allAsistentes, viewMode, formData.tipo, user, assistantSearch, assistantDateFilter]);
 
   const toggleAssistant = (beneficiary: any) => {
     if (selectedAssistants.find(a => a._id === beneficiary._id)) {
@@ -1374,7 +1421,7 @@ export default function Actividades() {
         <div className="px-2">
           <button 
             onClick={() => setViewMode('list')}
-            className="w-full flex items-center justify-center gap-3 py-4 bg-[#0072B1] hover:bg-[#005a8e] text-white rounded-[20px] shadow-lg shadow-[#0072B1]/20 transition-all font-black text-lg group"
+            className="w-full flex items-center justify-center gap-3 py-4 bg-brand-green hover:bg-emerald-700 text-white rounded-[20px] shadow-lg shadow-brand-green/20 transition-all font-black text-lg group"
           >
             <ArrowLeft className="group-hover:-translate-x-1 transition-transform" />
             <span>Volver atras</span>
@@ -1416,7 +1463,7 @@ export default function Actividades() {
               {activeTab === 'info' ? (
                 <div className="space-y-12">
                   <div className="flex flex-col items-center gap-6">
-                    <div className="w-full bg-[#0072B1] text-white py-4 px-8 rounded-xl font-black text-center text-lg shadow-lg shadow-[#0072B1]/20">
+                    <div className="w-full bg-brand-green text-white py-4 px-8 rounded-xl font-black text-center text-lg shadow-lg shadow-brand-green/20">
                       Detalles de la Actividad
                     </div>
                   </div>
@@ -1488,7 +1535,7 @@ export default function Actividades() {
                             const reactKey = idValue || `asistente-${index}`;
                             
                             // Try to find in allBeneficiarios
-                            let beneficiary = allBeneficiarios.find(b => b._id === idValue || b.id === idValue);
+                            let beneficiary = allBeneficiarios.find(b => b._id === idValue || b.id === idValue) || allAsistentes.find(b => b._id === idValue || b.id === idValue);
                             
                             // If still not fully resolved, maybe data is in the asistenteItem itself
                             let nombre = beneficiary?.nombre_completo || beneficiary?.nombre;
@@ -1521,13 +1568,13 @@ export default function Actividades() {
                               <td colSpan={3} className="py-20 text-center italic text-slate-400 text-xs">No hay asistentes registrados</td>
                             </tr>
                           )}
-                       </tbody>
-                     </table>
-                   </div>
+                        </tbody>
+                      </table>
+                    </div>
 
-                   {/* Pagination Controls */}
-                    <div className="p-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
-                      <div className="flex items-center gap-6">
+                    {/* Pagination Controls */}
+                    <div className="p-6 border-t border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/30">
+                      <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6">
                         <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                           Asistentes totales: <span className="text-slate-900">{realAsistentes.length}</span>
                         </p>
@@ -1550,7 +1597,7 @@ export default function Actividades() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center justify-center gap-2">
                         <button 
                           onClick={() => setCurrentPageAsistentes(p => Math.max(1, p - 1))}
                           disabled={currentPageAsistentes === 1}
@@ -1601,7 +1648,7 @@ export default function Actividades() {
 
               <button 
                 onClick={() => setIsExportColumnsOpen(true)}
-                className="w-full flex items-center justify-center gap-2 py-4 bg-[#0072B1] hover:bg-[#005a8e] text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-700/20"
+                className="w-full flex items-center justify-center gap-2 py-4 bg-brand-green hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-brand-green/20"
               >
                 <FileText size={16} /> EXPORTAR A EXCEL
               </button>
@@ -1665,7 +1712,7 @@ export default function Actividades() {
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="bg-[#0072B1] px-8 py-4">
+              <div className="bg-brand-green px-8 py-4">
                 <h3 className="text-white font-bold text-sm tracking-wide uppercase">Información Básica</h3>
               </div>
               <form onSubmit={handleCreate} className="p-8 space-y-6">
@@ -1759,7 +1806,7 @@ export default function Actividades() {
                 <div className="flex justify-end pt-4">
                   <button 
                     type="submit"
-                    className="flex items-center gap-2 px-10 py-4 bg-[#0072B1] hover:bg-[#005a8e] text-white rounded-[20px] font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-[#0072B1]/20"
+                    className="flex items-center gap-2 px-10 py-4 bg-brand-green hover:bg-emerald-700 text-white rounded-[20px] font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-brand-green/20"
                   >
                     <Save size={18} />
                     {editingId ? 'ACTUALIZAR ACTIVIDAD' : (viewMode === 'activity' ? 'GUARDAR ACTIVIDAD' : 'GUARDAR REUNIÓN')}
@@ -1775,7 +1822,7 @@ export default function Actividades() {
           {/* Sidebar Asistentes */}
           <div className="space-y-6">
             <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-[700px]">
-              <div className="bg-[#0072B1] px-6 py-4 flex items-center justify-between">
+              <div className="bg-brand-green px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Users size={16} className="text-white" />
                   <h3 className="text-white font-bold text-sm tracking-wide uppercase">Asistentes</h3>
@@ -1929,7 +1976,7 @@ export default function Actividades() {
         <StatsCard 
           label="REUNIONES" 
           value={stats.meetings} 
-          icon={<Clock className="text-[#0072B1]" size={24} />} 
+          icon={<Clock className="text-brand-green" size={24} />} 
         />
         <StatsCard 
           label="ESTE MES" 
@@ -1939,7 +1986,7 @@ export default function Actividades() {
         <StatsCard 
           label="TOTAL ASISTENTES" 
           value={stats.totalAssistants} 
-          icon={<Users className="text-[#0072B1]" size={24} />} 
+          icon={<Users className="text-brand-green" size={24} />} 
           subValue={`PROMEDIO: ${stats.total > 0 ? Math.round(stats.totalAssistants / stats.total) : 30} POR ACTIVIDAD`}
         />
       </div>
@@ -1966,7 +2013,7 @@ export default function Actividades() {
                 setSelectedAssistants([]);
                 setViewMode('activity');
               }}
-              className="w-full sm:w-auto justify-center bg-[#0072B1] hover:bg-[#005a8e] text-white font-black text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-2xl shadow-lg shadow-[#0072B1]/20 transition-all flex items-center gap-2"
+              className="w-full sm:w-auto justify-center bg-brand-green hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest px-8 py-3.5 rounded-2xl shadow-lg shadow-brand-green/20 transition-all flex items-center gap-2"
             >
               <Plus size={16} strokeWidth={2.5} />
               NUEVA ACTIVIDAD
@@ -2084,26 +2131,26 @@ export default function Actividades() {
                 ) : (
                   paginatedActividades.map((act) => (
                     <tr key={act._id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-6 py-6">
+                      <td className="px-6 py-6 border-b border-slate-50">
                         <div className="space-y-1">
-                          <p className="text-sm font-bold text-slate-700 leading-tight group-hover:text-[#0072B1] transition-colors">{act.tema || act.nombre}</p>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-[#0072B1] text-[9px] font-black uppercase rounded-md border border-blue-100">
+                          <p className="text-sm font-bold text-slate-700 leading-tight group-hover:text-brand-green transition-colors">{act.tema || act.nombre}</p>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-brand-green text-[9px] font-black uppercase rounded-md border border-emerald-100">
                              <Tag size={8} /> {act.tipo || 'Actividad'}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-6">
+                      <td className="px-6 py-6 border-b border-slate-50">
                         <div className="space-y-0.5">
                           <p className="text-xs font-bold text-slate-800">{new Date(act.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{act.horaInicio} - {act.horaFin}</p>
                         </div>
                       </td>
-                      <td className="px-6 py-6 text-xs font-bold text-slate-600">{act.lugar}</td>
-                      <td className="px-6 py-6">
+                      <td className="px-6 py-6 border-b border-slate-50 text-xs font-bold text-slate-600">{act.lugar}</td>
+                      <td className="px-6 py-6 border-b border-slate-50">
                         <p className="text-[10px] text-slate-500 font-bold leading-tight max-w-[200px]">{act.dependencia || 'Secretaría de Inclusión'}</p>
                       </td>
-                      <td className="px-6 py-6">
-                        <div className="flex items-center gap-2 text-xs font-black text-[#0072B1]">
+                      <td className="px-6 py-6 border-b border-slate-50">
+                        <div className="flex items-center gap-2 text-xs font-black text-brand-green">
                           <Users size={14} />
                           {act.asistentes?.length || 0}
                         </div>
@@ -2169,8 +2216,8 @@ export default function Actividades() {
           </div>
 
           {/* Pagination */}
-          <div className="p-6 border-t border-slate-150 flex items-center justify-between bg-slate-50/10 mt-4 rounded-b-2xl">
-            <div className="flex items-center gap-6">
+          <div className="p-6 border-t border-slate-150 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/10 mt-4 rounded-b-2xl">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6">
               <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                 Actividades totales: <span className="text-slate-900">{filteredActividades.length}</span>
               </p>
@@ -2193,7 +2240,7 @@ export default function Actividades() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <button 
                 type="button"
                 onClick={() => setCurrentPageActividades(p => Math.max(1, p - 1))}
@@ -2248,6 +2295,50 @@ export default function Actividades() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Success/Notification Modal */}
+      <Dialog.Root open={!!successModal?.isOpen} onOpenChange={(open) => {
+        if (!open) setSuccessModal(null);
+      }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-[32px] shadow-2xl z-[101] overflow-hidden outline-none p-8 text-center space-y-6">
+            <div className={cn(
+              "w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-inner",
+              successModal?.type === 'success' ? "bg-emerald-50 text-brand-green" : "bg-red-50 text-brand-red"
+            )}>
+              {successModal?.type === 'success' ? (
+                <CheckCircle2 size={36} className="animate-pulse" />
+              ) : (
+                <AlertCircle size={36} className="animate-bounce" />
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Dialog.Title className="text-xl font-display font-black text-slate-800 uppercase tracking-tight">
+                {successModal?.title}
+              </Dialog.Title>
+              <Dialog.Description className="text-xs text-slate-500 font-semibold leading-relaxed">
+                {successModal?.message}
+              </Dialog.Description>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setSuccessModal(null)}
+                className={cn(
+                  "w-full py-3 text-white rounded-xl font-bold uppercase text-xs tracking-widest transition-all cursor-pointer",
+                  successModal?.type === 'success' 
+                    ? "bg-brand-green hover:bg-emerald-700 shadow-md shadow-brand-green/20" 
+                    : "bg-brand-red hover:bg-red-700 shadow-md shadow-brand-red/20"
+                )}
+              >
+                Aceptar
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </>
   );
 }
@@ -2266,7 +2357,7 @@ function StatsCard({ label, value, icon, subValue }: { label: string, value: any
       </div>
       {subValue && (
         <div className="absolute bottom-4 left-7">
-          <p className="text-[9px] font-black text-[#0072B1] uppercase tracking-wider">{subValue}</p>
+          <p className="text-[9px] font-black text-brand-green uppercase tracking-wider">{subValue}</p>
         </div>
       )}
     </div>
