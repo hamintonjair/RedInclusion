@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Building2, AlertCircle, Loader2, Smartphone, Download, Share, X, Apple, ExternalLink, Shield } from 'lucide-react';
+import { Lock, Building2, AlertCircle, Loader2, Smartphone, Download, Share, X, Apple, ExternalLink, Shield, Globe } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isIosModalOpen, setIsIosModalOpen] = useState(false);
-  const [isAppStoreModalOpen, setIsAppStoreModalOpen] = useState(false);
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -178,20 +177,25 @@ export const Login: React.FC = () => {
               </p>
               
               <div className="grid grid-cols-3 gap-2">
-                {/* Opción 1: App Store */}
-                <button
-                  type="button"
-                  onClick={() => setIsAppStoreModalOpen(true)}
+                {/* Opción 1: APKPure Store */}
+                <a
+                  href="https://apkpure.com/Red-de-Inclusion-Quibdo/com.quibdo.inclusion"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex flex-col items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/40 hover:bg-slate-50 hover:border-slate-200 transition-all cursor-pointer group text-center min-h-[90px]"
                 >
-                  <Apple size={20} className="text-slate-700 group-hover:scale-110 transition-transform mb-1.5" />
+                  <div className="text-[#24cd77] group-hover:scale-110 transition-transform mb-1.5 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.4z" />
+                    </svg>
+                  </div>
                   <span className="text-[10px] font-extrabold text-slate-800 uppercase tracking-tight block">
-                    App Store
+                    APKPure
                   </span>
-                  <span className="text-[8px] text-slate-400 font-semibold uppercase tracking-wide leading-tight mt-1">
-                    iOS Oficial
+                  <span className="text-[8px] text-[#24cd77] font-bold uppercase tracking-wide leading-tight mt-1">
+                    Ver Tienda
                   </span>
-                </button>
+                </a>
 
                 {/* Opción 2: Descarga Directa en Google Drive */}
                 <a
@@ -238,62 +242,6 @@ export const Login: React.FC = () => {
             </div>
           </div>
         </motion.div>
-
-        {/* Modal: App Store Proximamente */}
-        <AnimatePresence>
-          {isAppStoreModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative shadow-2xl border border-slate-100"
-              >
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-slate-100 rounded-lg text-slate-800">
-                        <Apple size={24} />
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-900">App Store</h3>
-                    </div>
-                    <button
-                      onClick={() => setIsAppStoreModalOpen(false)}
-                      className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    <p className="text-sm font-semibold text-slate-800">
-                      ¡Publicación en proceso!
-                    </p>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      Actualmente estamos completando la revisión oficial para la tienda de aplicaciones <strong>App Store</strong> de Apple. Estará disponible públicamente muy pronto.
-                    </p>
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      Mientras tanto, puedes añadir y usar esta aplicación en tu iPhone al instante como una <strong>Web App de Pantalla Completa (PWA)</strong> siguiendo la guía de la opción "iPhone / iOS" en la pantalla de inicio.
-                    </p>
-                  </div>
-
-                  <div className="mt-6 flex justify-end">
-                    <button
-                      onClick={() => {
-                        setIsAppStoreModalOpen(false);
-                        setIsIosModalOpen(true);
-                      }}
-                      className="px-4 py-2 bg-[#00a859] hover:bg-[#00904a] text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-[#00a859]/20"
-                    >
-                      Ver Guía de iPhone en su lugar
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-
         {/* Modal: Guía iOS PWA */}
         <AnimatePresence>
           {isIosModalOpen && (
