@@ -2,8 +2,8 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { motion } from 'motion/react';
-import { Save, User, MapPin, HeartPulse, GraduationCap, ClipboardList } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Save, User, MapPin, HeartPulse, GraduationCap, ClipboardList, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { barriosPorComuna } from '../data/barriosPorComuna';
 import { cn } from '../lib/utils';
@@ -13,21 +13,33 @@ import api from '../lib/api';
 import SignatureCanvas from 'react-signature-canvas';
 
 const schema = z.object({
-  nombre_completo: z.string().min(3, 'Mínimo 3 caracteres'),
+  nombre_completo: z.string()
+    .min(3, 'Mínimo 3 caracteres')
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/, 'El nombre solo debe contener texto'),
   tipo_documento: z.string(),
-  numero_documento: z.string().min(5, 'Documento inválido'),
+  numero_documento: z.string()
+    .min(5, 'Documento inválido')
+    .regex(/^\d+$/, 'El documento solo debe contener números'),
   genero: z.string(),
   rango_edad: z.string(),
   sabe_leer: z.boolean(),
   sabe_escribir: z.boolean(),
-  numero_celular: z.string().min(7, 'Mínimo 7 dígitos'),
-  correo_electronico: z.string().email().optional().or(z.literal('')),
+  numero_celular: z.string()
+    .min(7, 'Mínimo 7 dígitos')
+    .regex(/^\d+$/, 'El teléfono solo debe contener números'),
+  correo_electronico: z.string()
+    .email('Ingrese un correo electrónico válido (ej: usuario@correo.com)')
+    .optional()
+    .or(z.literal('')),
   etnia: z.string(),
   comuna: z.string().min(1, 'Requerido'),
   barrio: z.string().min(1, 'Requerido'),
   tiene_discapacidad: z.boolean(),
   tipo_discapacidad: z.string().optional().or(z.literal('')),
-  nombre_cuidadora: z.string().optional().or(z.literal('')),
+  nombre_cuidadora: z.string()
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]*$/, 'El nombre de la cuidadora solo debe contener texto')
+    .optional()
+    .or(z.literal('')),
   labora_cuidadora: z.boolean().optional(),
   tiene_certificado_discapacidad: z.boolean().optional(),
   victima_conflicto: z.boolean(),
@@ -65,10 +77,42 @@ export const Registro: React.FC = () => {
   const [docExists, setDocExists] = React.useState<{ exists: boolean; nombre: string | null } | null>(null);
   const [checkingEmail, setCheckingEmail] = React.useState(false);
   const [emailExists, setEmailExists] = React.useState<{ exists: boolean; nombre: string | null } | null>(null);
+  const [successModal, setSuccessModal] = React.useState<{message: string; isUpdate: boolean} | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const sigPad = React.useRef<any>(null);
   const sigContainerRef = React.useRef<HTMLDivElement>(null);
   const [isEditingSignature, setIsEditingSignature] = React.useState(false);
+
+  const [isFullScreenSignatureOpen, setIsFullScreenSignatureOpen] = React.useState(false);
+  const fullScreenSigPad = React.useRef<any>(null);
+
+  const openSignatureModal = async () => {
+    setIsFullScreenSignatureOpen(true);
+    
+    // Detect mobile and try to rotate screen orientation programmatically
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    const orientation = window.screen && (window.screen.orientation as any);
+    if (isMobile && orientation && typeof orientation.lock === 'function') {
+      try {
+        await orientation.lock('landscape');
+      } catch (err) {
+        console.log("Orientation lock not supported without fullscreen mode restriction", err);
+      }
+    }
+  };
+
+  const closeSignatureModal = () => {
+    setIsFullScreenSignatureOpen(false);
+    const orientation = window.screen && (window.screen.orientation as any);
+    if (orientation && typeof orientation.unlock === 'function') {
+      try {
+        orientation.unlock();
+      } catch (err) {
+        console.log("Could not unlock orientation:", err);
+      }
+    }
+  };
 
   // Asegurar que el canvas tenga el tamaño correcto al mostrarse
   React.useEffect(() => {
@@ -82,6 +126,49 @@ export const Registro: React.FC = () => {
       }
     }
   }, [isEditingSignature, editId]);
+
+  React.useEffect(() => {
+    if (isFullScreenSignatureOpen) {
+      // Delay slightly to allow the modal paint to complete perfectly
+      const timer = setTimeout(() => {
+        if (fullScreenSigPad.current) {
+          const canvas = fullScreenSigPad.current.getCanvas();
+          if (canvas) {
+            const rect = canvas.parentElement?.getBoundingClientRect();
+            if (rect) {
+              canvas.width = rect.width;
+              canvas.height = rect.height;
+              fullScreenSigPad.current.clear();
+            }
+          }
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isFullScreenSignatureOpen]);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (isFullScreenSignatureOpen && fullScreenSigPad.current) {
+        const canvas = fullScreenSigPad.current.getCanvas();
+        if (canvas) {
+          const rect = canvas.parentElement?.getBoundingClientRect();
+          if (rect) {
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            fullScreenSigPad.current.clear();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, [isFullScreenSignatureOpen]);
 
   const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -261,16 +348,31 @@ export const Registro: React.FC = () => {
   const barrios = barriosPorComuna.find(c => c.comuna === selectedComuna)?.barrios || [];
 
   const onSubmit = async (data: FormData) => {
+    const currentFirma = watch('firma') || data.firma;
+    const inlinePadHasSignature = sigPad.current && !sigPad.current.isEmpty();
+    
+    if (!currentFirma && !inlinePadHasSignature) {
+      setErrorMessage('La firma del beneficiario es un campo obligatorio para guardar el registro. Por favor, firme utilizando el botón de firma digital.');
+      setTimeout(() => setErrorMessage(null), 6000);
+      setIsSubmitting(false);
+      return;
+    }
+
     setIsSubmitting(true);
     // Capturar firma antes de enviar si hay algo en el pad
-    if (sigPad.current && !sigPad.current.isEmpty()) {
+    if (inlinePadHasSignature) {
       data.firma = sigPad.current.getCanvas().toDataURL('image/png');
+    } else {
+      data.firma = currentFirma;
     }
 
     try {
       if (editId) {
         await api.put(`/beneficiarios/${editId}`, data);
-        alert('Información actualizada exitosamente.');
+        setSuccessModal({
+          message: '¡La información municipal del beneficiario ha sido actualizada de manera formal y guardada en el servidor!',
+          isUpdate: true
+        });
       } else {
         const payload = {
           ...data,
@@ -280,12 +382,19 @@ export const Registro: React.FC = () => {
           fecha_registro: new Date().toISOString()
         };
         await api.post('/beneficiarios', payload);
-        alert('Beneficiario registrado exitosamente.');
+        setSuccessModal({
+          message: '¡Registrado con éxito! El nuevo beneficiario ha sido sumado al censo de la Red de Inclusión de Quibdó.',
+          isUpdate: false
+        });
       }
-      navigate('/beneficiarios');
-    } catch (error) {
+      setTimeout(() => {
+        setSuccessModal(null);
+        navigate('/beneficiarios');
+      }, 2500);
+    } catch (error: any) {
       console.error('Error saving:', error);
-      alert('Error al procesar la solicitud.');
+      setErrorMessage(error.response?.data?.error || 'Ocurrió un error inesperado al procesar el registro del beneficiario. Intente nuevamente.');
+      setTimeout(() => setErrorMessage(null), 5000);
     } finally {
       setIsSubmitting(false);
     }
@@ -360,7 +469,15 @@ export const Registro: React.FC = () => {
 
           <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputField label="Nombre Completo" {...register('nombre_completo')} error={errors.nombre_completo?.message} />
+              <InputField 
+                label="Nombre Completo" 
+                {...register('nombre_completo', {
+                  onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                    e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '');
+                  }
+                })} 
+                error={errors.nombre_completo?.message} 
+              />
               <SelectField label="Tipo de Documento" {...register('tipo_documento')} error={errors.tipo_documento?.message}>
                 <option value="Cédula">Cédula</option>
                 <option value="Tarjeta de Identidad">Tarjeta de Identidad</option>
@@ -373,7 +490,11 @@ export const Registro: React.FC = () => {
               <div className="relative">
                 <InputField 
                   label="Número de Documento" 
-                  {...register('numero_documento')} 
+                  {...register('numero_documento', {
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                      e.target.value = e.target.value.replace(/\D/g, '');
+                    }
+                  })} 
                   error={errors.numero_documento?.message} 
                   className={cn(
                     docExists?.exists && "border-red-500",
@@ -432,12 +553,21 @@ export const Registro: React.FC = () => {
               </SelectField>
               <ToggleField label="¿Sabe leer?" checked={watch('sabe_leer')} onChange={(v) => setValue('sabe_leer', v)} />
               <ToggleField label="¿Sabe escribir?" checked={watch('sabe_escribir')} onChange={(v) => setValue('sabe_escribir', v)} />
-              <InputField label="Número de Celular" {...register('numero_celular')} error={errors.numero_celular?.message} />
+              <InputField 
+                label="Número de Celular" 
+                {...register('numero_celular', {
+                  onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                    e.target.value = e.target.value.replace(/\D/g, '');
+                  }
+                })} 
+                error={errors.numero_celular?.message} 
+              />
               <div className="relative">
                 <InputField 
                   label="Correo Electrónico" 
                   {...register('correo_electronico')} 
                   type="email" 
+                  error={errors.correo_electronico?.message}
                   className={cn(
                     emailExists?.exists && "border-red-500",
                     emailExists && !emailExists.exists && "border-green-500"
@@ -516,7 +646,15 @@ export const Registro: React.FC = () => {
                 <option value="Cognitiva">Cognitiva</option>
                 <option value="Múltiple">Múltiple</option>
               </SelectField>
-              <InputField label="Nombre de la Cuidadora" {...register('nombre_cuidadora')} />
+              <InputField 
+                label="Nombre de la Cuidadora" 
+                {...register('nombre_cuidadora', {
+                  onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                    e.target.value = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '');
+                  }
+                })} 
+                error={errors.nombre_cuidadora?.message}
+              />
               <ToggleField label="¿Labora la Cuidadora?" checked={watch('labora_cuidadora')} onChange={(v) => setValue('labora_cuidadora', v)} />
               <ToggleField label="¿Tiene certificado de discapacidad?" checked={watch('tiene_certificado_discapacidad')} onChange={(v) => setValue('tiene_certificado_discapacidad', v)} />
             </motion.div>
@@ -612,73 +750,59 @@ export const Registro: React.FC = () => {
         {/* Section 4: Signature */}
         <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
           <div className="flex flex-col gap-4">
-            <h3 className="text-sm font-bold text-slate-800 text-left">Firma del Beneficiario</h3>
+            <h3 className="text-sm font-bold text-slate-800 text-left">
+              Firma del Beneficiario <span className="text-red-500 font-extrabold">*</span>
+            </h3>
             
             <div className="border border-slate-200 rounded-xl p-6 flex flex-col items-center gap-6 bg-slate-50/30">
-              {watch('firma') && !isEditingSignature ? (
+              {watch('firma') ? (
                 <div className="flex flex-col items-center gap-4 w-full">
                   <div className="w-full max-w-lg h-48 bg-white rounded-xl border border-slate-200 flex items-center justify-center p-2 shadow-inner">
                     <img src={watch('firma')} alt="Firma Guardada" className="max-w-full max-h-full object-contain" />
                   </div>
+                  
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    <CheckCircle2 size={12} className="text-emerald-500" />
+                    Firma Capturada con Éxito
+                  </span>
+
                   <button 
                     type="button" 
-                    onClick={() => {
-                      setIsEditingSignature(true);
-                      setTimeout(() => sigPad.current?.clear(), 100);
-                    }}
-                    className="flex items-center gap-2 text-brand-green font-bold text-sm bg-white border border-brand-green/20 px-6 py-3 rounded-xl hover:bg-brand-green hover:text-white transition-all shadow-sm"
+                    onClick={openSignatureModal}
+                    className="flex items-center gap-2 text-[#00a859] hover:bg-[#00a859] hover:text-white border border-[#00a859]/20 font-extrabold text-xs px-6 py-3 rounded-xl transition-all shadow-sm uppercase tracking-wider cursor-pointer font-sans"
                   >
-                    <PencilIcon size={16} /> CAMBIAR FIRMA
+                    <PencilIcon size={14} /> REHACER O FIRMAR DE NUEVO
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-4 w-full">
-                  <div 
-                    ref={sigContainerRef}
-                    className="w-full max-w-lg h-60 bg-white rounded-xl border-2 border-dashed border-slate-300 relative overflow-hidden group"
-                  >
-                    <SignatureCanvas 
-                      ref={sigPad}
-                      penColor='black'
-                      onEnd={saveSignature}
-                      canvasProps={{
-                        className: "signature-canvas cursor-crosshair w-full h-full"
-                      }} 
-                    />
-                    {(!watch('firma') || isEditingSignature) && (
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10 group-hover:opacity-20 transition-opacity">
-                        <p className="text-slate-500 font-display italic text-3xl select-none">
-                          {watch('nombre_completo') || 'Firme aquí'}
-                        </p>
-                      </div>
-                    )}
+                <div className="flex flex-col items-center gap-4 w-full py-6">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        sigPad.current?.clear();
-                        setValue('firma', '');
-                      }}
-                      className="px-6 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-bold hover:bg-red-50 transition-colors"
-                    >
-                      LIMPIAR
-                    </button>
-                    {editId && watch('firma') && (
-                      <button 
-                        type="button" 
-                        onClick={() => setIsEditingSignature(false)}
-                        className="px-6 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-50 transition-colors"
-                      >
-                        CANCELAR
-                      </button>
-                    )}
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-tight">Firma Digital Obligatoria</h4>
+                    <p className="text-xs text-slate-400 max-w-sm">
+                      Para continuar con el registro en el censo, es obligatorio capturar la firma digital de conformidad del beneficiario.
+                    </p>
                   </div>
+
+                  <button 
+                    type="button" 
+                    onClick={openSignatureModal}
+                    className="flex items-center gap-2 text-white bg-[#00a859] hover:bg-[#00904a] font-black text-xs px-8 py-3.5 rounded-xl transition-all shadow-md shadow-[#00a859]/15 uppercase tracking-wider cursor-pointer font-sans"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    Firmar Presencialmente
+                  </button>
                 </div>
               )}
-              <p className="text-[10px] text-slate-400 text-center italic max-w-md">
-                Por favor, asegúrese de que la firma sea legible. Si utiliza un dispositivo móvil, puede firmar directamente con su dedo sobre el recuadro punteado.
+              <p className="text-[10px] text-slate-400 text-center italic max-w-sm">
+                Al hacer clic se habilitará el lienzo móvil rotado en pantalla completa para que firme con su dedo cómodamente en posición horizontal.
               </p>
             </div>
           </div>
@@ -706,6 +830,192 @@ export const Registro: React.FC = () => {
           </button>
         </div>
       </form>
+
+      <AnimatePresence>
+        {successModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-[4px] p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="bg-white rounded-[32px] max-w-md w-full p-8 shadow-2xl border border-slate-100 text-center space-y-6"
+            >
+              <div className="w-16 h-16 bg-emerald-50 text-brand-green rounded-full flex items-center justify-center mx-auto shadow-inner">
+                <CheckCircle2 size={36} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-display font-black text-slate-800 uppercase tracking-tight">
+                  {successModal.isUpdate ? 'Actualización Exitosa' : 'Registro Completo'}
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                  {successModal.message}
+                </p>
+              </div>
+              <div className="pt-2">
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: '0%' }}
+                    animate={{ width: '100%' }}
+                    transition={{ duration: 2.3, ease: 'linear' }}
+                    className="bg-brand-green h-full"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mt-2">Redireccionando...</span>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="fixed bottom-6 right-6 z-[100] max-w-sm w-full bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3 shadow-xl shadow-red-900/5">
+            <AlertCircle className="text-brand-red shrink-0 mt-0.5" size={18} />
+            <div className="space-y-1">
+              <span className="block text-xs font-black text-brand-red uppercase tracking-wider">Error de Validación</span>
+              <p className="text-xs text-red-700 font-medium leading-relaxed">{errorMessage}</p>
+            </div>
+          </div>
+        )}
+
+        {isFullScreenSignatureOpen && (
+          <div className="fixed inset-0 z-[140] bg-slate-900 flex flex-col text-white select-none">
+            {/* Top Header / Bar */}
+            <div className="bg-slate-950 px-6 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3 text-left">
+                <div className="p-2 bg-emerald-500/10 text-[#00a859] rounded-lg">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-white leading-tight">Lienzo de Firma Oficial</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight leading-none mt-0.5">
+                    Beneficiario: <span className="text-emerald-400 font-extrabold">{watch('nombre_completo') || 'Registro de Censo'}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeSignatureModal}
+                className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Main Content Pane */}
+            <div className="flex-1 flex flex-col md:flex-row relative">
+              
+              {/* Optional warning when held in portrait mode on mobile/tablet */}
+              <div className="portrait:flex landscape:hidden md:hidden absolute inset-0 z-30 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center space-y-6">
+                <div className="p-4 bg-emerald-500/5 rounded-full border border-emerald-500/10">
+                  <DeviceRotateIllustration />
+                </div>
+                <div className="space-y-2 max-w-sm">
+                  <h4 className="text-lg font-black uppercase tracking-wider text-emerald-400">Girar Dispositivo</h4>
+                  <p className="text-xs text-slate-300 font-semibold leading-relaxed">
+                    Para una firma digital cómoda, amplia y de alta resolución, por favor coloque su teléfono en posición **Horizontal (Apaisado)**.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const forcePortraitOverride = document.querySelector('.portrait\\:flex');
+                    if (forcePortraitOverride) {
+                      forcePortraitOverride.classList.add('hidden');
+                      forcePortraitOverride.classList.remove('portrait:flex');
+                    }
+                  }}
+                  className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-xs font-black uppercase tracking-wider rounded-xl transition-all border border-slate-700"
+                >
+                  Continuar en Vertical
+                </button>
+              </div>
+
+              {/* Sidebar/Controls Section */}
+              <div className="w-full md:w-80 bg-slate-950 p-6 flex flex-col justify-between border-r border-slate-800 shrink-0 gap-6 text-left">
+                <div className="space-y-4">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-[#00a859] border border-emerald-500/20">
+                    Censo Oficial
+                  </span>
+                  <p className="text-xs text-slate-400 leading-relaxed font-semibold">
+                    Dibuje su firma con su dedo o lápiz óptico sobre el área blanca. Asegúrese de que coincida con su documento de identidad.
+                  </p>
+                  
+                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
+                    <span className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">Documento</span>
+                    <p className="text-xs text-slate-300 font-extrabold font-mono">
+                      {watch('tipo_documento') || 'No ingresado'}: {watch('numero_documento') || 'No ingresado'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (fullScreenSigPad.current) {
+                        const signatureData = fullScreenSigPad.current.getCanvas().toDataURL('image/png');
+                        if (fullScreenSigPad.current.isEmpty()) {
+                          setErrorMessage('Por favor, dibuje una firma antes de guardar.');
+                          setTimeout(() => setErrorMessage(null), 4000);
+                          return;
+                        }
+                        setValue('firma', signatureData);
+                        closeSignatureModal();
+                      }
+                    }}
+                    className="w-full py-4 bg-[#00a859] hover:bg-[#00904a] text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-950/50 cursor-pointer font-sans"
+                  >
+                    Guardar Firma
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      fullScreenSigPad.current?.clear();
+                    }}
+                    className="w-full py-3.5 bg-slate-850 hover:bg-slate-800 text-slate-200 text-xs font-black uppercase tracking-widest rounded-xl transition-all border border-slate-750 cursor-pointer font-sans"
+                  >
+                    Limpiar Lienzo
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={closeSignatureModal}
+                    className="w-full py-3 text-slate-400 hover:text-slate-200 text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer font-sans"
+                  >
+                    Volver Atrás
+                  </button>
+                </div>
+              </div>
+
+              {/* Drawing Board Canvas Area */}
+              <div className="flex-1 bg-white relative p-4 flex items-center justify-center min-h-[300px]">
+                <div className="absolute inset-4 border-4 border-dashed border-slate-200 rounded-2xl flex items-center justify-center overflow-hidden bg-slate-50">
+                  <SignatureCanvas
+                    ref={fullScreenSigPad}
+                    penColor="black"
+                    canvasProps={{
+                      className: "absolute inset-0 w-full h-full cursor-crosshair",
+                      style: { width: '100%', height: '100%' }
+                    }}
+                  />
+                  
+                  <div className="pointer-events-none opacity-[0.06] flex flex-col items-center justify-center select-none space-y-2 text-center">
+                    <span className="text-3xl lg:text-5xl font-black uppercase tracking-wider text-slate-900 leading-none">
+                      ÁREA DE FIRMA DIGITAL
+                    </span>
+                    <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-slate-900">
+                      MUNICIPIO DE QUIBDÓ
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -778,5 +1088,15 @@ const ToggleField = ({ label, checked, onChange }: { label: string, checked: boo
 
 const PencilIcon = ({ size, className }: any) => (
   <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+);
+
+const DeviceRotateIllustration = () => (
+  <svg viewBox="0 0 100 100" className="w-16 h-16 animate-pulse text-[#00a859]">
+    <rect x="25" y="10" width="50" height="80" rx="8" fill="none" stroke="currentColor" strokeWidth="4" />
+    <circle cx="50" cy="82" r="3" fill="currentColor" />
+    <path d="M50 30 C30 30 15 45 15 65" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="4,4" />
+    <path d="M10 60 L15 65 L20 60" fill="none" stroke="currentColor" strokeWidth="3" />
+    <text x="50" y="52" fontSize="12" fontWeight="black" textAnchor="middle" fill="currentColor" className="animate-bounce">↺</text>
+  </svg>
 );
 

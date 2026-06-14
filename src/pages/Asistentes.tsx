@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import api from '../lib/api';
 import SignatureCanvas from 'react-signature-canvas';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function Asistentes() {
   // Lists and Data
@@ -306,19 +307,40 @@ export default function Asistentes() {
         </div>
       </div>
 
-      {/* Alertas Globales */}
-      {successMsg && (
-        <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 text-emerald-800 text-xs font-semibold animate-fadeIn shadow-sm">
-          <CheckCircle2 className="text-emerald-500" size={18} />
-          <span>{successMsg}</span>
-        </div>
-      )}
-      {errorMsg && !showModal && (
-        <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-800 text-xs font-semibold animate-fadeIn shadow-sm">
-          <AlertCircle className="text-red-500" size={18} />
-          <span>{errorMsg}</span>
-        </div>
-      )}
+      {/* Alertas Globales Flotantes */}
+      <AnimatePresence>
+        {successMsg && (
+          <motion.div 
+            initial={{ opacity: 0, y: 35, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+            className="fixed bottom-6 right-6 z-[120] max-w-sm w-full bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-start gap-3 shadow-2xl shadow-emerald-950/10"
+          >
+            <CheckCircle2 className="text-emerald-500 shrink-0 mt-0.5 animate-pulse" size={20} />
+            <div className="space-y-1">
+              <span className="block text-xs font-black text-emerald-800 uppercase tracking-widest">Operación Exitosa</span>
+              <p className="text-xs text-slate-600 font-semibold leading-relaxed">{successMsg}</p>
+            </div>
+          </motion.div>
+        )}
+
+        {errorMsg && !showModal && (
+          <motion.div 
+            initial={{ opacity: 0, y: 35, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+            className="fixed bottom-6 right-6 z-[120] max-w-sm w-full bg-red-50 border border-red-100 p-4 rounded-xl flex items-start gap-3 shadow-2xl shadow-red-950/10"
+          >
+            <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={20} />
+            <div className="space-y-1">
+              <span className="block text-xs font-black text-red-800 uppercase tracking-widest">Error de Entrada</span>
+              <p className="text-xs text-slate-650 font-semibold leading-relaxed">{errorMsg}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bento Grid metrics card */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

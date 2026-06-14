@@ -179,7 +179,7 @@ export const Login: React.FC = () => {
               <div className="grid grid-cols-3 gap-2">
                 {/* Opción 1: APKPure Store */}
                 <a
-                  href="https://apkpure.com/Red-de-Inclusion-Quibdo/com.quibdo.inclusion"
+                  href="https://apkpure.com/p/com.quibdo.inclusion"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex flex-col items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/40 hover:bg-slate-50 hover:border-slate-200 transition-all cursor-pointer group text-center min-h-[90px]"

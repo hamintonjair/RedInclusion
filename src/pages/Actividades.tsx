@@ -10,6 +10,8 @@ import {
   Layers, 
   Search, 
   CheckCircle, 
+  CheckCircle2,
+  AlertCircle,
   Clock, 
   Users, 
   ChevronLeft, 
@@ -179,6 +181,8 @@ export default function Actividades() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [actividades, setActividades] = useState<any[]>([]);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
@@ -364,10 +368,13 @@ export default function Actividades() {
       if (editingId) {
         await api.put(`/actividades/${editingId}`, activityPayload);
         setSuccess('¡Actividad actualizada con éxito!');
+        setSuccessToast('¡La actividad/reunión ha sido actualizada exitosamente en la base de datos municipal!');
       } else {
         await api.post('/actividades', activityPayload);
         setSuccess('¡Actividad registrada con éxito!');
+        setSuccessToast('¡La actividad/reunión ha sido creada e incorporada al cronograma oficial!');
       }
+      setTimeout(() => setSuccessToast(null), 4000);
       
       // Reset after 1.5s
       setTimeout(() => {
@@ -391,6 +398,8 @@ export default function Actividades() {
     } catch (err) {
       console.error('Error saving activity:', err);
       setError('Hubo un error al guardar. Reintente.');
+      setErrorToast('Hubo un error al procesar la solicitud del formulario. Por favor verifique los datos.');
+      setTimeout(() => setErrorToast(null), 4000);
     }
   };
 
@@ -443,8 +452,12 @@ export default function Actividades() {
         setSelectedActDetail(null);
       }
       fetchActividades();
+      setSuccessToast('¡La actividad o reunión ha sido eliminada del registro de forma definitiva!');
+      setTimeout(() => setSuccessToast(null), 4000);
     } catch (err) {
       console.error('Error deleting activity:', err);
+      setErrorToast('Hubo un error al intentar eliminar el registro de la actividad.');
+      setTimeout(() => setErrorToast(null), 4000);
     }
   };
 
@@ -2213,6 +2226,28 @@ export default function Actividades() {
       </div>
       {renderDeleteConfirmModal()}
       {renderExportColumnsModal()}
+
+      <AnimatePresence>
+        {successToast && (
+          <div className="fixed bottom-6 right-6 z-[120] max-w-sm w-full bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-start gap-3 shadow-2xl shadow-emerald-950/10">
+            <CheckCircle2 className="text-brand-green shrink-0 mt-0.5" size={20} />
+            <div className="space-y-1">
+              <span className="block text-xs font-black text-emerald-800 uppercase tracking-wider">Operación Exitosa</span>
+              <p className="text-xs text-emerald-700 font-medium leading-relaxed">{successToast}</p>
+            </div>
+          </div>
+        )}
+
+        {errorToast && (
+          <div className="fixed bottom-6 right-6 z-[120] max-w-sm w-full bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3 shadow-2xl shadow-red-950/10">
+            <AlertCircle className="text-brand-red shrink-0 mt-0.5" size={20} />
+            <div className="space-y-1">
+              <span className="block text-xs font-black text-brand-red uppercase tracking-wider">Error Operativo</span>
+              <p className="text-xs text-red-700 font-medium leading-relaxed">{errorToast}</p>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

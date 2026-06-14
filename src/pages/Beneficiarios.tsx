@@ -10,11 +10,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
-  Database
+  Database,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { cn, formatDate } from '../lib/utils';
 import api from '../lib/api';
+import { motion, AnimatePresence } from 'motion/react';
 
 import { useAuth } from '../context/AuthContext';
 
@@ -28,6 +31,8 @@ export const ListadoBeneficiarios: React.FC = () => {
   const [selectedBeneficiario, setSelectedBeneficiario] = useState<any>(null);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
 
   // Export State Variables
   const [exportType, setExportType] = useState<'todos' | 'rango'>('todos');
@@ -433,17 +438,21 @@ export const ListadoBeneficiarios: React.FC = () => {
   const handleDelete = async () => {
     if (!deleteId) return;
     if (user?.rol !== 'admin') {
-      alert('No tiene permisos para realizar esta acción.');
+      setErrorToast('No tiene permisos administrativos para realizar esta acción.');
       setDeleteId(null);
+      setTimeout(() => setErrorToast(null), 4000);
       return;
     }
     try {
       await api.delete(`/beneficiarios/${deleteId}`);
       fetchBeneficiarios();
       setDeleteId(null);
+      setSuccessToast('¡El registro del beneficiario ha sido eliminado exitosamente del censo municipal!');
+      setTimeout(() => setSuccessToast(null), 4000);
     } catch (error) {
       console.error('Error deleting:', error);
-      alert('Error al eliminar el registro.');
+      setErrorToast('Ocurrió un error inesperado al intentar remover este beneficiario.');
+      setTimeout(() => setErrorToast(null), 4000);
     }
   };
 
@@ -881,6 +890,28 @@ export const ListadoBeneficiarios: React.FC = () => {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <AnimatePresence>
+        {successToast && (
+          <div className="fixed bottom-6 right-6 z-[120] max-w-sm w-full bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-start gap-3 shadow-2xl shadow-emerald-950/10">
+            <CheckCircle2 className="text-brand-green shrink-0 mt-0.5" size={20} />
+            <div className="space-y-1">
+              <span className="block text-xs font-black text-emerald-800 uppercase tracking-wider">Operación Exitosa</span>
+              <p className="text-xs text-emerald-700 font-medium leading-relaxed">{successToast}</p>
+            </div>
+          </div>
+        )}
+
+        {errorToast && (
+          <div className="fixed bottom-6 right-6 z-[120] max-w-sm w-full bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3 shadow-2xl shadow-red-950/10">
+            <AlertCircle className="text-brand-red shrink-0 mt-0.5" size={20} />
+            <div className="space-y-1">
+              <span className="block text-xs font-black text-brand-red uppercase tracking-wider">Error Operativo</span>
+              <p className="text-xs text-red-700 font-medium leading-relaxed">{errorToast}</p>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -920,6 +920,26 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <AnimatePresence>
+        {isSavedSuccessfully && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+            className="fixed top-6 right-6 z-[200] max-w-sm w-full bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-start gap-3 shadow-2xl shadow-emerald-950/10"
+          >
+            <CheckCircle2 className="text-brand-green shrink-0 mt-0.5 animate-pulse" size={20} />
+            <div className="space-y-1">
+              <span className="block text-xs font-black text-emerald-800 uppercase tracking-widest leading-none">Perfil Actualizado</span>
+              <p className="text-xs text-slate-600 font-semibold leading-relaxed">
+                ¡La información del funcionario ha sido guardada y sincronizada de forma correcta!
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
