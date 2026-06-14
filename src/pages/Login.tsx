@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Building2, AlertCircle, Loader2 } from 'lucide-react';
+import { Lock, Building2, AlertCircle, Loader2, Smartphone, Download, Share, X, Apple, ExternalLink } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isIosModalOpen, setIsIosModalOpen] = useState(false);
+  const [isAppStoreModalOpen, setIsAppStoreModalOpen] = useState(false);
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -168,8 +170,206 @@ export const Login: React.FC = () => {
                 {isLoading ? <Loader2 className="animate-spin" size={24} /> : 'Iniciar Sesión'}
               </button>
             </form>
+
+            {/* Sección de Descargas de la App Oficial */}
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center mb-3.5">
+                Descarga la App Oficial
+              </p>
+              
+              <div className="grid grid-cols-3 gap-2">
+                {/* Opción 1: App Store */}
+                <button
+                  type="button"
+                  onClick={() => setIsAppStoreModalOpen(true)}
+                  className="flex flex-col items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/40 hover:bg-slate-50 hover:border-slate-200 transition-all cursor-pointer group text-center min-h-[90px]"
+                >
+                  <Apple size={20} className="text-slate-700 group-hover:scale-110 transition-transform mb-1.5" />
+                  <span className="text-[10px] font-extrabold text-slate-800 uppercase tracking-tight block">
+                    App Store
+                  </span>
+                  <span className="text-[8px] text-slate-400 font-semibold uppercase tracking-wide leading-tight mt-1">
+                    iOS Oficial
+                  </span>
+                </button>
+
+                {/* Opción 2: Descarga Directa en Google Drive */}
+                <a
+                  href="https://drive.google.com/drive/folders/1IX61CJPPfRxUGl5oC6hAMjM8TM2nj5uv?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/40 hover:bg-slate-50 hover:border-slate-200 transition-all cursor-pointer group text-center min-h-[90px]"
+                >
+                  <Download size={20} className="text-[#00a859] group-hover:scale-110 transition-transform mb-1.5" />
+                  <span className="text-[10px] font-extrabold text-slate-800 uppercase tracking-tight block">
+                    Directa Drive
+                  </span>
+                  <span className="text-[8px] text-[#00a859] font-bold uppercase tracking-wide leading-tight mt-1">
+                    Descargar APK
+                  </span>
+                </a>
+
+                {/* Opción 3: iPhone / iOS PWA */}
+                <button
+                  type="button"
+                  onClick={() => setIsIosModalOpen(true)}
+                  className="flex flex-col items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/40 hover:bg-slate-50 hover:border-slate-200 transition-all cursor-pointer group text-center min-h-[90px]"
+                >
+                  <Smartphone size={20} className="text-[#0066cc] group-hover:scale-110 transition-transform mb-1.5" />
+                  <span className="text-[10px] font-extrabold text-[#0066cc] uppercase tracking-tight block">
+                    iPhone / iOS
+                  </span>
+                  <span className="text-[8px] text-[#0066cc] font-semibold uppercase tracking-wide leading-tight mt-1">
+                    Ver Guía PWA
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
         </motion.div>
+
+        {/* Modal: App Store Proximamente */}
+        <AnimatePresence>
+          {isAppStoreModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative shadow-2xl border border-slate-100"
+              >
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-slate-100 rounded-lg text-slate-800">
+                        <Apple size={24} />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900">App Store</h3>
+                    </div>
+                    <button
+                      onClick={() => setIsAppStoreModalOpen(false)}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-slate-800">
+                      ¡Publicación en proceso!
+                    </p>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Actualmente estamos completando la revisión oficial para la tienda de aplicaciones <strong>App Store</strong> de Apple. Estará disponible públicamente muy pronto.
+                    </p>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Mientras tanto, puedes añadir y usar esta aplicación en tu iPhone al instante como una <strong>Web App de Pantalla Completa (PWA)</strong> siguiendo la guía de la opción "iPhone / iOS" en la pantalla de inicio.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      onClick={() => {
+                        setIsAppStoreModalOpen(false);
+                        setIsIosModalOpen(true);
+                      }}
+                      className="px-4 py-2 bg-[#00a859] hover:bg-[#00904a] text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-[#00a859]/20"
+                    >
+                      Ver Guía de iPhone en su lugar
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Modal: Guía iOS PWA */}
+        <AnimatePresence>
+          {isIosModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="bg-white rounded-2xl w-full max-w-md overflow-hidden relative shadow-2xl border border-slate-100"
+              >
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-[#0066cc]/10 rounded-lg text-[#0066cc]">
+                        <Smartphone size={24} />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900">Aplicación en iPhone / iOS</h3>
+                    </div>
+                    <button
+                      onClick={() => setIsIosModalOpen(false)}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  {/* Header visual de la app */}
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center gap-3 mb-6">
+                    <img 
+                      src="/icon.png" 
+                      alt="Logo App" 
+                      className="w-11 h-11 rounded-xl shadow-sm border border-slate-200" 
+                      referrerPolicy="no-referrer"
+                    />
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800">Red de Inclusión Quibdó</h4>
+                      <p className="text-[10px] text-slate-500 font-medium">Instalación instantánea sin App Store</p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs font-semibold text-slate-800 mb-4">
+                    Sigue estos sencillos pasos para agregar la app a tu pantalla de inicio:
+                  </p>
+
+                  <div className="space-y-4">
+                    <div className="flex gap-3">
+                      <div className="w-5 h-5 rounded-full bg-[#0066cc] text-white flex items-center justify-center text-[10px] font-black shrink-0">1</div>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Asegúrate de estar abriendo esta página desde el navegador oficial <strong className="text-slate-800 font-extrabold">Safari</strong> en tu iPhone o iPad.
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="w-5 h-5 rounded-full bg-[#0066cc] text-white flex items-center justify-center text-[10px] font-black shrink-0">2</div>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Toca el botón oficial de <strong className="text-[#0066cc] font-extrabold">Compartir <Share size={12} className="inline-block relative -top-0.5" /></strong> en la barra de navegación de Safari (el cuadro con la flecha apuntando hacia arriba).
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="w-5 h-5 rounded-full bg-[#0066cc] text-white flex items-center justify-center text-[10px] font-black shrink-0">3</div>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Desplázate hacia abajo en el menú de compartición y selecciona <strong className="text-slate-800 font-extrabold">"Agregar a inicio"</strong> o <strong className="text-slate-800 font-extrabold">"Añadir a pantalla de inicio"</strong>.
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="w-5 h-5 rounded-full bg-[#00a859] text-white flex items-center justify-center text-[10px] font-black shrink-0">4</div>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Presiona <strong className="text-[#00a859] font-extrabold">"Fijar"</strong> o <strong className="text-[#00a859] font-extrabold">"Agregar"</strong> en la esquina superior derecha y ¡listo! Ya tienes el acceso directo premium directamente en tu teléfono.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-7 flex justify-end">
+                    <button
+                      onClick={() => setIsIosModalOpen(false)}
+                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all"
+                    >
+                      Entendido, cerrar
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
