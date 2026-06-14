@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Building2, AlertCircle, Loader2, Smartphone, Download, Share, X, Apple, ExternalLink, Shield, Globe } from 'lucide-react';
+import { Lock, Building2, AlertCircle, Loader2, Smartphone, Download, Share, X, Apple, ExternalLink, Shield, Globe, Eye, EyeOff } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isIosModalOpen, setIsIosModalOpen] = useState(false);
   const { login, isLoading } = useAuth();
@@ -145,16 +146,26 @@ export const Login: React.FC = () => {
                 >
                   Contraseña
                 </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  className="w-full px-4 py-3 bg-transparent border-2 rounded-xl outline-none transition-colors text-slate-700 font-medium focus:border-[#00a859]"
-                  style={{ borderColor: 'rgba(0,168,89, 0.4)' }}
-                />
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="w-full pl-4 pr-11 py-3 bg-transparent border-2 rounded-xl outline-none transition-colors text-slate-700 font-medium focus:border-[#00a859]"
+                    style={{ borderColor: 'rgba(0,168,89, 0.4)' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                    title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
               <button

@@ -12,7 +12,9 @@ import {
   Phone,
   AlertCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { cn, formatDate } from '../lib/utils';
@@ -56,6 +58,7 @@ export const Funcionarios: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showPassword, setShowPassword] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(9); // Since it's a 3x3 grid usually
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormData>({
@@ -400,15 +403,25 @@ export const Funcionarios: React.FC = () => {
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Contraseña {editingId && '(Opcional)'}</label>
-                  <input 
-                    {...register('password')}
-                    type="password"
-                    className={cn(
-                      "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green",
-                      errors.password && "border-brand-red"
-                    )}
-                    placeholder="••••••••"
-                  />
+                  <div className="relative">
+                    <input 
+                      {...register('password')}
+                      type={showPassword ? "text" : "password"}
+                      className={cn(
+                        "w-full pl-4 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-green",
+                        errors.password && "border-brand-red"
+                      )}
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                      title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                   {errors.password && <p className="text-brand-red text-[10px] font-bold uppercase pl-1">{errors.password.message}</p>}
                 </div>
 
