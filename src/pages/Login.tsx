@@ -224,6 +224,17 @@ export const Login: React.FC = () => {
                   </span>
                 </button>
               </div>
+
+              <div className="text-center pt-2 border-t border-slate-100/50">
+                <button
+                  type="button"
+                  onClick={() => navigate('/politica-privacidad')}
+                  className="inline-flex items-center gap-1.5 text-[10px] font-extrabold text-[#00a859] hover:text-[#00904a] transition-colors uppercase tracking-wider cursor-pointer"
+                >
+                  <Shield size={12} className="text-emerald-500" />
+                  <span>Política de Privacidad y de Datos</span>
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>

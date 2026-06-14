@@ -11,6 +11,7 @@ import { Comunas } from './pages/Comunas';
 import Actividades from './pages/Actividades';
 import Asistentes from './pages/Asistentes';
 import { DashboardLayout } from './components/DashboardLayout';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: string[] }> = ({ children, allowedRoles }) => {
   const { user, isLoading } = useAuth();
@@ -40,6 +41,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/politica-privacidad" element={<PrivacyPolicy />} />
           <Route 
             path="/dashboard" 
             element={
