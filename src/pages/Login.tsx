@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Building2, AlertCircle, Loader2, Smartphone, Download, Share, X, Apple, ExternalLink } from 'lucide-react';
+import { Lock, Building2, AlertCircle, Loader2, Smartphone, Download, Share, X, Apple, ExternalLink, Shield } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
