@@ -28,7 +28,9 @@ import {
   ChevronLeft,
   ChevronDown,
   ChevronUp,
-  ClipboardList
+  ClipboardList,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -54,6 +56,26 @@ const navItems: NavItem[] = [
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, updateUser } = useAuth();
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+  const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
+    }
+    return 'light';
+  });
+
+  React.useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+    localStorage.setItem('theme', nextTheme);
+  };
 
   React.useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -244,7 +266,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   const filteredNav = navItems.filter(item => item.roles.includes(user?.rol || ''));
 
   return (
-    <div className="min-h-screen bg-brand-light flex">
+    <div className="min-h-screen bg-brand-light dark:bg-slate-950 flex font-sans text-slate-800 dark:text-slate-100">
       {/* Mobile Sidebar Overlay */}
       {isOpen && (
         <div 
@@ -256,13 +278,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       {/* Sidebar */}
       <aside 
         className={cn(
-          "bg-white border-r border-slate-150 transition-all duration-300 flex flex-col z-50 fixed md:relative h-full",
+          "bg-white dark:bg-slate-900 border-r border-slate-150 dark:border-slate-800 transition-all duration-300 flex flex-col z-50 fixed md:relative h-full",
           isOpen ? "w-64 translate-x-0" : "-translate-x-full md:translate-x-0 w-64 md:w-20"
         )}
       >
         {/* Top Header Box in Sidebar */}
         <div 
-          className="p-3 select-none flex flex-col gap-2 border-b border-slate-100 shrink-0 md:pt-3"
+          className="p-3 select-none flex flex-col gap-2 border-b border-slate-100 dark:border-slate-800 shrink-0 md:pt-3"
           style={{
             paddingTop: typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform() 
               ? 'calc(env(safe-area-inset-top, 24px) + 0.75rem)' 
@@ -296,13 +318,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         </div>
 
         {/* Collapsible toggle arrow */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-slate-50 shrink-0">
-          {isOpen && <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Menú Principal</span>}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-slate-50 dark:border-slate-800 shrink-0">
+          {isOpen && <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">Menú Principal</span>}
           <button 
             type="button"
             onClick={() => setIsOpen(!isOpen)}
             className={cn(
-              "p-1.5 hover:bg-slate-50 border border-slate-200 rounded-lg text-slate-400 cursor-pointer transition-all",
+              "p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 cursor-pointer transition-all",
               !isOpen && "mx-auto"
             )}
             title={isOpen ? "Colapsar menú" : "Expandir menú"}
@@ -466,17 +488,17 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         </div>
 
         {/* Sidebar Footer User & Logout */}
-        <div className="p-4 border-t border-slate-100 shrink-0">
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
           {isOpen && (
             <div className="mb-4 px-2">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Usuario Conectado</span>
+              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Usuario Conectado</span>
               <div className="flex items-center gap-3 mt-2">
-                <div className="w-8 h-8 rounded-full bg-brand-green/10 flex items-center justify-center text-brand-green font-black text-xs shrink-0 select-none font-sans">
+                <div className="w-8 h-8 rounded-full bg-brand-green/10 dark:bg-brand-green/20 flex items-center justify-center text-brand-green font-black text-xs shrink-0 select-none font-sans">
                   {user?.nombreCompleto?.charAt(0) || 'U'}
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <p className="text-xs font-extrabold truncate text-slate-700 leading-none">{user?.nombreCompleto}</p>
-                  <p className="text-[9px] font-black text-[#0072B1] bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded text-left uppercase mt-1 inline-block leading-none font-sans">
+                  <p className="text-xs font-extrabold truncate text-slate-700 dark:text-slate-200 leading-none">{user?.nombreCompleto}</p>
+                  <p className="text-[9px] font-black text-[#0072B1] dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30 px-1.5 py-0.5 rounded text-left uppercase mt-1 inline-block leading-none font-sans">
                     {user?.rol}
                   </p>
                 </div>
@@ -487,11 +509,11 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             type="button"
             onClick={handleLogout}
             className={cn(
-              "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-red-50 hover:text-brand-red transition-all duration-200 cursor-pointer",
+              "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-brand-red transition-all duration-200 cursor-pointer",
               !isOpen && "justify-center px-2"
             )}
           >
-            <LogOut size={18} className="text-slate-400 group-hover:text-brand-red" />
+            <LogOut size={18} className="text-slate-400 dark:text-slate-500 group-hover:text-brand-red" />
             {isOpen && <span className="text-xs uppercase tracking-wider font-extrabold">Cerrar Sesión</span>}
           </button>
         </div>
@@ -500,7 +522,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         <header 
-          className="min-h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 pb-1 md:pt-0 md:pb-0 h-auto md:h-16"
+          className="min-h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:px-8 shrink-0 pb-1 md:pt-0 md:pb-0 h-auto md:h-16"
           style={{
             paddingTop: typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform() 
               ? 'calc(env(safe-area-inset-top, 24px) + 8px)' 
@@ -515,12 +537,12 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
               <Menu size={24} />
             </button>
             <div className="flex flex-col">
-              <h1 className="text-lg font-display font-semibold text-slate-800 capitalize truncate max-w-[120px] sm:max-w-xs leading-tight">
+              <h1 className="text-lg font-display font-semibold text-slate-800 dark:text-white capitalize truncate max-w-[120px] sm:max-w-xs leading-tight">
                 {location.pathname.replace('/', '') || 'Dashboard'}
               </h1>
               <div className="flex items-center gap-1 mt-0.5">
                 <div className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
-                <span className={cn("text-[8px] font-black uppercase tracking-widest", isOnline ? "text-emerald-600" : "text-red-600")}>
+                <span className={cn("text-[8px] font-black uppercase tracking-widest", isOnline ? "text-emerald-600" : "text-red-500")}>
                   {isOnline ? "En Línea" : "Sin Conexión"}
                 </span>
               </div>
@@ -528,14 +550,25 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="hidden md:flex flex-col items-end mr-4">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Secretaría de</span>
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Secretaría de</span>
               <span className="text-xs font-bold text-brand-green uppercase tracking-tight">
                 {user?.secretaría?.replace('Secretaría de ', '') || 'Inclusión y Cohesión Social'}
               </span>
             </div>
+            
+            {/* Theme Toggle Button */}
+            <button 
+              type="button"
+              onClick={handleToggleTheme}
+              className="p-2 text-slate-400 hover:text-[#00A86B] dark:hover:text-amber-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer flex items-center justify-center"
+              title={theme === 'light' ? "Activar modo oscuro" : "Activar modo claro"}
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
+
             <button 
               onClick={() => setIsSettingsOpen(true)}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors cursor-pointer"
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
             >
               <Settings size={20} />
             </button>
@@ -558,7 +591,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
       <Dialog.Root open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110]" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl bg-white rounded-[40px] shadow-2xl z-[111] overflow-hidden outline-none border border-slate-100 animate-fadeIn h-[580px] flex flex-col">
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl bg-white dark:bg-slate-900 rounded-[40px] shadow-2xl z-[111] overflow-hidden outline-none border border-slate-100 dark:border-slate-800 animate-fadeIn h-[580px] flex flex-col">
             
             {/* Header del Modal */}
             <div className="bg-slate-900 p-6 px-8 flex items-center justify-between border-b border-slate-850 shrink-0">
@@ -584,14 +617,14 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             <div className="flex flex-1 overflow-hidden">
               
               {/* Sidebar de pestañas */}
-              <div className="w-56 bg-slate-50 border-r border-slate-100 p-4 flex flex-col gap-1.5 shrink-0">
+              <div className="w-56 bg-slate-50 dark:bg-slate-950 border-r border-slate-100 dark:border-slate-800 p-4 flex flex-col gap-1.5 shrink-0">
                 <button
                   onClick={() => setActiveTab('perfil')}
                   className={cn(
                     "flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider text-left transition-all cursor-pointer",
                     activeTab === 'perfil' 
                       ? "bg-brand-green text-white shadow-md shadow-brand-green/25" 
-                      : "text-slate-600 hover:bg-slate-100"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                   )}
                 >
                   <User size={16} />
@@ -604,7 +637,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                     "flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider text-left transition-all cursor-pointer",
                     activeTab === 'sistema' 
                       ? "bg-brand-green text-white shadow-md shadow-brand-green/25" 
-                      : "text-slate-600 hover:bg-slate-100"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                   )}
                 >
                   <Settings size={16} />
@@ -617,21 +650,21 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                     "flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider text-left transition-all cursor-pointer",
                     activeTab === 'diagnostico' 
                       ? "bg-brand-green text-white shadow-md shadow-brand-green/25" 
-                      : "text-slate-600 hover:bg-slate-100"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                   )}
                 >
                   <Database size={16} />
                   Local & Atlas
                 </button>
 
-                <div className="mt-auto p-3 bg-slate-100/50 rounded-2xl border border-slate-200/50 flex flex-col items-center text-center gap-1">
+                <div className="mt-auto p-3 bg-slate-100/50 dark:bg-slate-900/50 rounded-2xl border border-slate-200/50 dark:border-slate-800/85 flex flex-col items-center text-center gap-1">
                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Versión Activa</span>
-                  <span className="text-xs font-bold text-slate-600">v1.4.2-producción</span>
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-350">v1.4.2-producción</span>
                 </div>
               </div>
 
               {/* Area de contenido */}
-              <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+              <div className="flex-1 p-8 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900">
                 
                 {/* Formulario 1: Perfil de Funcionario */}
                 {activeTab === 'perfil' && (
@@ -767,47 +800,84 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                         </div>
                       </div>
 
+                      {/* Tema del Sistema */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1">Tema Visual del Sistema</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTheme('light');
+                              localStorage.setItem('theme', 'light');
+                            }}
+                            className={cn(
+                              "py-2 rounded-xl text-[10px] font-black tracking-wide border transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                              theme === 'light'
+                                ? "bg-slate-900 border-slate-900 text-white"
+                                : "bg-white dark:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            )}
+                          >
+                            <Sun size={12} /> Tema Claro (Actual)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTheme('dark');
+                              localStorage.setItem('theme', 'dark');
+                            }}
+                            className={cn(
+                              "py-2 rounded-xl text-[10px] font-black tracking-wide border transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                              theme === 'dark'
+                                ? "bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-950"
+                                : "bg-white dark:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            )}
+                          >
+                            <Moon size={12} /> Tema Oscuro
+                          </button>
+                        </div>
+                      </div>
+
                       {/* Toggles (Validation, map precision, coverage alerts) */}
                       <div className="space-y-2.5 pt-1.5">
                         {/* Validacion Fina */}
-                        <label className="flex items-start gap-2.5 cursor-pointer p-2.5 bg-slate-50 rounded-xl hover:bg-slate-100/70 border border-slate-100 transition-all select-none">
+                        <label className="flex items-start gap-2.5 cursor-pointer p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl hover:bg-slate-100/70 dark:hover:bg-slate-800/80 border border-slate-100 dark:border-slate-800 transition-all select-none">
                           <input
                             type="checkbox"
                             checked={strictValidation}
                             onChange={(e) => setStrictValidation(e.target.checked)}
-                            className="mt-0.5 w-3.5 h-3.5 rounded text-brand-green focus:ring-brand-green border-slate-300"
+                            className="mt-0.5 w-3.5 h-3.5 rounded text-brand-green focus:ring-brand-green border-slate-300 dark:border-slate-700"
                           />
                           <div className="space-y-0.5">
-                            <span className="text-[10px] font-black uppercase text-slate-800 tracking-wide">Validación Estricta</span>
-                            <p className="text-[9px] text-slate-400 leading-normal">Exigir validaciones de formato de identificación.</p>
+                            <span className="text-[10px] font-black uppercase text-slate-800 dark:text-slate-200 tracking-wide">Validación Estricta</span>
+                            <p className="text-[9px] text-slate-405 dark:text-slate-400 leading-normal">Exigir validaciones de formato de identificación.</p>
                           </div>
                         </label>
 
                         {/* Cobertura Territorial Alerts */}
-                        <label className="flex items-start gap-2.5 cursor-pointer p-2.5 bg-slate-50 rounded-xl hover:bg-slate-100/70 border border-slate-100 transition-all select-none">
+                        <label className="flex items-start gap-2.5 cursor-pointer p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl hover:bg-slate-100/70 dark:hover:bg-slate-800/80 border border-slate-100 dark:border-slate-800 transition-all select-none">
                           <input
                             type="checkbox"
                             checked={coverageAlerts}
                             onChange={(e) => setCoverageAlerts(e.target.checked)}
-                            className="mt-0.5 w-3.5 h-3.5 rounded text-brand-green focus:ring-brand-green border-slate-300"
+                            className="mt-0.5 w-3.5 h-3.5 rounded text-brand-green focus:ring-brand-green border-slate-300 dark:border-slate-700"
                           />
                           <div className="space-y-0.5">
-                            <span className="text-[10px] font-black uppercase text-slate-800 tracking-wide">Alertas de Saturación</span>
-                            <p className="text-[9px] text-slate-400 leading-normal">Notificar cuando comunas excedan el umbral.</p>
+                            <span className="text-[10px] font-black uppercase text-slate-800 dark:text-slate-200 tracking-wide">Alertas de Saturación</span>
+                            <p className="text-[9px] text-slate-405 dark:text-slate-400 leading-normal">Notificar cuando comunas excedan el umbral.</p>
                           </div>
                         </label>
 
                         {/* Precision Puntos Mapa */}
-                        <label className="flex items-start gap-2.5 cursor-pointer p-2.5 bg-slate-50 rounded-xl hover:bg-slate-100/70 border border-slate-100 transition-all select-none">
+                        <label className="flex items-start gap-2.5 cursor-pointer p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl hover:bg-slate-100/70 dark:hover:bg-slate-800/80 border border-slate-100 dark:border-slate-800 transition-all select-none">
                           <input
                             type="checkbox"
                             checked={mapPrecision}
                             onChange={(e) => setMapPrecision(e.target.checked)}
-                            className="mt-0.5 w-3.5 h-3.5 rounded text-brand-green focus:ring-brand-green border-slate-300"
+                            className="mt-0.5 w-3.5 h-3.5 rounded text-brand-green focus:ring-brand-green border-slate-300 dark:border-slate-700"
                           />
                           <div className="space-y-0.5">
-                            <span className="text-[10px] font-black uppercase text-slate-800 tracking-wide">Optimizar Geolocalización</span>
-                            <p className="text-[9px] text-slate-400 leading-normal">Aproximar cuando falten datos catastrales.</p>
+                            <span className="text-[10px] font-black uppercase text-slate-800 dark:text-slate-200 tracking-wide">Optimizar Geolocalización</span>
+                            <p className="text-[9px] text-slate-405 dark:text-slate-400 leading-normal">Aproximar cuando falten datos catastrales.</p>
                           </div>
                         </label>
                       </div>
