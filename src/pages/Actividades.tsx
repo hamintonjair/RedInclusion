@@ -344,6 +344,17 @@ export default function Actividades() {
     fetchBeneficiarios();
     fetchLineas();
     fetchAsistentes();
+
+    const handleSync = () => {
+      console.log('[OfflineSync] Sync event received in Actividades, refreshing data...');
+      fetchActividades();
+      fetchBeneficiarios();
+      fetchAsistentes();
+    };
+    window.addEventListener('offline-record-synced', handleSync);
+    return () => {
+      window.removeEventListener('offline-record-synced', handleSync);
+    };
   }, []);
 
   // Sync default line of work when user or lines are loaded
@@ -2133,7 +2144,14 @@ export default function Actividades() {
                     <tr key={act._id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-6 py-6 border-b border-slate-50">
                         <div className="space-y-1">
-                          <p className="text-sm font-bold text-slate-700 leading-tight group-hover:text-brand-green transition-colors">{act.tema || act.nombre}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-bold text-slate-700 leading-tight group-hover:text-brand-green transition-colors">{act.tema || act.nombre}</p>
+                            {act._isOffline && (
+                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[8px] font-black uppercase rounded-md tracking-wider border border-amber-200 animate-pulse">
+                                Local
+                              </span>
+                            )}
+                          </div>
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-brand-green text-[9px] font-black uppercase rounded-md border border-emerald-100">
                              <Tag size={8} /> {act.tipo || 'Actividad'}
                           </span>

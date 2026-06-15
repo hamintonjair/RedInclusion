@@ -72,6 +72,15 @@ export const LineasTrabajo: React.FC = () => {
 
   useEffect(() => {
     fetchLineas();
+
+    const handleSync = () => {
+      console.log('[OfflineSync] Sync event received in LineasTrabajo, refreshing...');
+      fetchLineas();
+    };
+    window.addEventListener('offline-record-synced', handleSync);
+    return () => {
+      window.removeEventListener('offline-record-synced', handleSync);
+    };
   }, []);
 
   const onSubmit = async (data: FormData) => {
@@ -240,7 +249,14 @@ export const LineasTrabajo: React.FC = () => {
                   </div>
                 </div>
                 
-                <h3 className="text-lg font-bold text-slate-800 mb-2">{linea.nombre}</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+                  <span>{linea.nombre}</span>
+                  {linea._isOffline && (
+                    <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[8px] font-black uppercase rounded-md tracking-wider border border-amber-200 animate-pulse">
+                      Local
+                    </span>
+                  )}
+                </h3>
                 <p className="text-sm text-slate-500 line-clamp-3 mb-4 leading-relaxed">
                   {linea.descripcion}
                 </p>

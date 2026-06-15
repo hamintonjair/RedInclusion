@@ -100,6 +100,15 @@ export const Funcionarios: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+
+    const handleSync = () => {
+      console.log('[OfflineSync] Sync event received in Funcionarios, refreshing...');
+      fetchData();
+    };
+    window.addEventListener('offline-record-synced', handleSync);
+    return () => {
+      window.removeEventListener('offline-record-synced', handleSync);
+    };
   }, []);
 
   const onSubmit = async (data: FormData) => {
@@ -292,7 +301,14 @@ export const Funcionarios: React.FC = () => {
                   </div>
                 </div>
                 
-                <h3 className="text-lg font-bold text-slate-800 mb-1 leading-tight">{f.nombre}</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-1 leading-tight flex items-center gap-2">
+                  <span>{f.nombre}</span>
+                  {f._isOffline && (
+                    <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[8px] font-black uppercase rounded-md tracking-wider border border-amber-200 animate-pulse">
+                      Local
+                    </span>
+                  )}
+                </h3>
                 <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-4">
                   <Shield size={12} className={f.rol === 'admin' ? 'text-amber-500' : 'text-blue-500'} />
                   {f.rol === 'admin' ? 'Administrador' : 'Funcionario'}

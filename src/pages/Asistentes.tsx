@@ -100,6 +100,15 @@ export default function Asistentes() {
   // Load Assistants on mount
   useEffect(() => {
     fetchAsistentes();
+
+    const handleSync = () => {
+      console.log('[OfflineSync] Sync event received in Asistentes, refreshing data...');
+      fetchAsistentes();
+    };
+    window.addEventListener('offline-record-synced', handleSync);
+    return () => {
+      window.removeEventListener('offline-record-synced', handleSync);
+    };
   }, []);
 
   const fetchAsistentes = async () => {
@@ -523,7 +532,14 @@ export default function Asistentes() {
                       {/* Name & Tag */}
                       <td className="py-4 px-6">
                         <div className="space-y-1">
-                          <p className="font-extrabold text-slate-800 text-sm">{item.nombre_completo}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-extrabold text-slate-800 text-sm">{item.nombre_completo}</p>
+                            {item._isOffline && (
+                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[8px] font-black uppercase rounded-md tracking-wider border border-amber-200 animate-pulse">
+                                Local
+                              </span>
+                            )}
+                          </div>
                           <span className={`inline-flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
                             item.tipo_participacion === 'CONTRATISTA' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
                             item.tipo_participacion === 'SERVIDOR PÚBLICO' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :

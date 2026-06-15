@@ -11,7 +11,12 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 4500, // 4.5 seconds timeout to detect slow networks
 });
+
+const dispatchNetworkState = (state: 'online' | 'offline' | 'slow') => {
+  window.dispatchEvent(new CustomEvent('app-network-status', { detail: { state } }));
+};
 
 // Función auxiliar para hacer peticiones usando CapacitorHttp (nativo)
 const nativeRequest = async (config: any) => {
@@ -90,6 +95,7 @@ if (isCapacitor) {
 // Intercept Axios to handle offline gracefully
 api.interceptors.response.use(
   (response) => {
+    dispatchNetworkState('online');
     // If it's a GET request, cache the response
     if (response.config.method?.toUpperCase() === 'GET' && response.config.url) {
       const cacheUrl = response.config.url + (response.config.params ? JSON.stringify(response.config.params) : '');
@@ -98,16 +104,28 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
-    // If network error (offline)
-    if (!navigator.onLine || error.code === 'ERR_NETWORK' || error.message === 'Network Error' || error.status === 0) {
-      const config = error.config;
-      const method = config.method?.toUpperCase();
+    const config = error?.config;
+    if (!config) {
+      return Promise.reject(error);
+    }
+
+    const method = config.method?.toUpperCase();
+    const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout') || error.message?.includes('exceeded');
+    const isOffline = !navigator.onLine || 
+                      !error.response || 
+                      error.code === 'ERR_NETWORK' || 
+                      error.message === 'Network Error' || 
+                      error.message?.includes('Network') || 
+                      error.status === 0;
+
+    if (isOffline || isTimeout) {
+      dispatchNetworkState(isTimeout ? 'slow' : 'offline');
 
       if (method === 'GET') {
         const cacheUrl = config.url + (config.params ? JSON.stringify(config.params) : '');
         const cachedData = await getCachedResponse(cacheUrl);
-        if (cachedData) {
-          console.warn('Network error, returning cached data for', cacheUrl);
+        if (cachedData !== null && cachedData !== undefined) {
+          console.warn('[API-Offline] Returning patched offline/cached data for:', cacheUrl);
           return Promise.resolve({ data: cachedData, status: 200, statusText: 'OK', headers: {}, config: config });
         }
       } else if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method!)) {
@@ -117,9 +135,18 @@ api.interceptors.response.use(
           return Promise.reject(error);
         }
 
-        console.warn('Network error, queueing request', config.url);
+        console.warn('[API-Offline] Connection lost or slow. Queueing write:', config.url);
         await saveOfflineRequest(config);
-        return Promise.resolve({ data: { message: 'Guardado localmente. Se sincronizará al conectar.' }, status: 202, statusText: 'Accepted', headers: {}, config: config });
+        return Promise.resolve({ 
+          data: { 
+            message: 'Guardado localmente. Se sincronizará al conectar.',
+            _isOffline: true 
+          }, 
+          status: 202, 
+          statusText: 'Accepted', 
+          headers: {}, 
+          config: config 
+        });
       }
     }
     return Promise.reject(error);

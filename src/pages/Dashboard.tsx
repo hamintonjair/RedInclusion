@@ -194,7 +194,17 @@ export const Dashboard: React.FC = () => {
         setLoading(false);
       }
     };
+    
     fetchData();
+
+    const handleSync = () => {
+      console.log('[OfflineSync] Sync event received in Dashboard, refreshing data...');
+      fetchData();
+    };
+    window.addEventListener('offline-record-synced', handleSync);
+    return () => {
+      window.removeEventListener('offline-record-synced', handleSync);
+    };
   }, [selectedLinea]);
 
   if (loading) {
@@ -527,8 +537,13 @@ export const Dashboard: React.FC = () => {
                       className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
                     >
                       <td className="py-5">
-                        <p className="text-xs font-black text-slate-800 group-hover:text-brand-green transition-colors">
-                          {item.nombre_completo}
+                        <p className="text-xs font-black text-slate-800 group-hover:text-brand-green transition-colors flex items-center gap-2">
+                          <span>{item.nombre_completo}</span>
+                          {item._isOffline && (
+                            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[8px] font-black uppercase rounded-md tracking-wider border border-amber-200 animate-pulse">
+                              Local
+                            </span>
+                          )}
                         </p>
                         <p className="text-[10px] font-bold text-slate-400 leading-none mt-1 group-hover:text-slate-500">
                           {docLabel}

@@ -7,6 +7,8 @@ const DB_NAME = 'RedInclusionOfflineDB';
 const STORE_NAME = 'requestsQueue';
 const CACHE_STORE = 'requestCache';
 
+const COLLECTIONS = ['beneficiarios', 'actividades', 'asistente', 'lineas', 'funcionarios', 'comunas'];
+
 let requestExecutor: ((config: any) => Promise<any>) | null = null;
 
 export function setRequestExecutor(executor: (config: any) => Promise<any>) {
@@ -26,14 +28,66 @@ async function getDB() {
   });
 }
 
+export function normalizeCacheUrl(url: string, params?: any): string {
+  let clean = url;
+  if (clean.startsWith('http')) {
+    try {
+      const parsed = new URL(clean);
+      clean = parsed.pathname + parsed.search;
+    } catch (e) {}
+  }
+  if (clean.startsWith('/api')) {
+    clean = clean.substring(4);
+  } else if (clean.startsWith('api/')) {
+    clean = clean.substring(4);
+  }
+  if (!clean.startsWith('/')) {
+    clean = '/' + clean;
+  }
+  if (params) {
+    clean += typeof params === 'string' ? params : JSON.stringify(params);
+  }
+  return clean;
+}
+
+function getCollectionFromUrl(url: string): string | null {
+  const normalized = url.toLowerCase();
+  for (const coll of COLLECTIONS) {
+    const regex = new RegExp(`\\/${coll}(\\/|\\?|$)`);
+    if (regex.test(normalized)) {
+      return coll;
+    }
+  }
+  return null;
+}
+
 export async function saveOfflineRequest(config: InternalAxiosRequestConfig) {
   const db = await getDB();
+  const method = config.method?.toUpperCase();
+  let offlineId = '';
+  
+  if (method === 'POST') {
+    offlineId = `offline_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    if (config.data) {
+      try {
+        let parsedData = typeof config.data === 'string' ? JSON.parse(config.data) : config.data;
+        parsedData._id = offlineId;
+        parsedData.id = offlineId;
+        parsedData._isOffline = true;
+        config.data = parsedData;
+      } catch (e) {
+        console.error('Failed to inject offlineId to POST data', e);
+      }
+    }
+  }
+
   await db.add(STORE_NAME, {
     url: config.url,
     method: config.method,
     data: config.data,
     headers: config.headers,
     timestamp: Date.now(),
+    offlineId: offlineId || undefined,
   });
 }
 
@@ -49,18 +103,63 @@ export async function processOfflineQueue() {
     return;
   }
 
+  const idMap = new Map<string, string>();
+
   for (const req of requests) {
     try {
-      await requestExecutor({
-        url: req.url,
+      let reqUrl = req.url;
+      let reqData = req.data;
+
+      // Translate offline temp IDs to real database IDs
+      idMap.forEach((realId, tempId) => {
+        if (reqUrl.includes(tempId)) {
+          console.log(`[OfflineSync] Translating tempId in URL: ${tempId} -> ${realId}`);
+          reqUrl = reqUrl.replace(tempId, realId);
+        }
+        if (reqData) {
+          try {
+            const reqDataStr = JSON.stringify(reqData);
+            if (reqDataStr.includes(tempId)) {
+              console.log(`[OfflineSync] Translating tempId in body data: ${tempId} -> ${realId}`);
+              reqData = JSON.parse(reqDataStr.replace(new RegExp(tempId, 'g'), realId));
+            }
+          } catch (e) {
+            console.error('[OfflineSync] Failed to translating tempId in body data', e);
+          }
+        }
+      });
+
+      console.log(`[OfflineSync] Syncing request: ${req.method} ${reqUrl}`);
+      const response = await requestExecutor({
+        url: reqUrl,
         method: req.method,
-        data: req.data,
+        data: reqData,
         headers: req.headers
       });
+
+      // Map POST offlineId to generated database ID
+      if (req.method?.toUpperCase() === 'POST' && req.offlineId && response?.data) {
+        const realId = response.data._id || response.data.id;
+        if (realId) {
+          console.log(`[OfflineSync] Mapped temp ID ${req.offlineId} to real ID ${realId}`);
+          idMap.set(req.offlineId, realId);
+        }
+      }
+
       await store.delete(req.id);
+      
+      // Dispatch an event to notify pages
+      window.dispatchEvent(new CustomEvent('offline-record-synced', { 
+        detail: { 
+          method: req.method, 
+          url: reqUrl,
+          offlineId: req.offlineId,
+          realId: response?.data?._id || response?.data?.id
+        } 
+      }));
+
     } catch (error) {
       console.error('Failed to sync offline request:', req, error);
-      // Stop syncing on first failure to maintain order, or retry later
       break; 
     }
   }
@@ -69,17 +168,132 @@ export async function processOfflineQueue() {
 export async function cacheResponse(url: string, data: any) {
   try {
     const db = await getDB();
-    await db.put(CACHE_STORE, { url, data, timestamp: Date.now() });
+    const cleanUrl = normalizeCacheUrl(url);
+    await db.put(CACHE_STORE, { url: cleanUrl, data, timestamp: Date.now() });
   } catch (error) {
     console.error('Failed to cache response', error);
   }
 }
 
+function patchCachedData(url: string, cachedData: any, pendingRequests: any[]) {
+  const collection = getCollectionFromUrl(url);
+  if (!collection) return cachedData;
+  
+  // Filter mutations (POST/PUT/DELETE) belonging to this collection
+  const relevantMutations = pendingRequests.filter(req => {
+    const method = req.method?.toUpperCase();
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return false;
+    
+    const reqCollection = getCollectionFromUrl(req.url);
+    return reqCollection === collection;
+  });
+  
+  if (relevantMutations.length === 0) return cachedData;
+  
+  let deepCopy = JSON.parse(JSON.stringify(cachedData));
+  let items: any[] = [];
+  let isPaginatedWrapper = false;
+  
+  if (Array.isArray(deepCopy)) {
+    items = deepCopy;
+  } else if (deepCopy && Array.isArray(deepCopy.data)) {
+    items = deepCopy.data;
+    isPaginatedWrapper = true;
+  } else {
+    // Check if it is a detail object e.g., GET /beneficiarios/1234
+    const urlParts = url.split('?')[0].split('/').filter(Boolean);
+    const lastSegment = urlParts[urlParts.length - 1];
+    const isDetailQuery = lastSegment && lastSegment !== collection;
+    
+    if (isDetailQuery) {
+      for (const req of relevantMutations) {
+        const method = req.method?.toUpperCase();
+        const reqParts = req.url.split('?')[0].split('/').filter(Boolean);
+        const reqLastId = reqParts[reqParts.length - 1];
+        
+        if (reqLastId === lastSegment) {
+          if (method === 'PUT' || method === 'PATCH') {
+            deepCopy = {
+              ...deepCopy,
+              ...req.data,
+              _isOffline: true
+            };
+          } else if (method === 'DELETE') {
+            return null;
+          }
+        }
+      }
+      return deepCopy;
+    }
+    
+    return cachedData;
+  }
+  
+  for (const req of relevantMutations) {
+    const method = req.method?.toUpperCase();
+    const reqParts = req.url.split('?')[0].split('/').filter(Boolean);
+    const lastPart = reqParts[reqParts.length - 1];
+    const hasId = lastPart && lastPart !== collection;
+    
+    if (method === 'POST') {
+      const offlineId = req.offlineId || `offline_${req.timestamp || Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      req.offlineId = offlineId;
+      
+      const newItem = {
+        _id: offlineId,
+        id: offlineId,
+        _isOffline: true,
+        ...req.data
+      };
+      
+      if (!newItem.createdAt) newItem.createdAt = new Date().toISOString();
+      
+      const exists = items.some(item => item._id === offlineId || item.id === offlineId);
+      if (!exists) {
+        items.unshift(newItem);
+      }
+    } else if ((method === 'PUT' || method === 'PATCH') && hasId) {
+      items = items.map(item => {
+        if (item._id === lastPart || item.id === lastPart) {
+          return {
+            ...item,
+            ...req.data,
+            _isOffline: true
+          };
+        }
+        return item;
+      });
+    } else if (method === 'DELETE' && hasId) {
+      items = items.filter(item => item._id !== lastPart && item.id !== lastPart);
+    }
+  }
+  
+  if (isPaginatedWrapper) {
+    deepCopy.data = items;
+    deepCopy.total = items.length;
+    if (deepCopy.limit) {
+      deepCopy.totalPages = Math.ceil(items.length / deepCopy.limit);
+    }
+  } else {
+    deepCopy = items;
+  }
+  
+  return deepCopy;
+}
+
 export async function getCachedResponse(url: string) {
   try {
     const db = await getDB();
-    const result = await db.get(CACHE_STORE, url);
-    return result ? result.data : null;
+    const cleanUrl = normalizeCacheUrl(url);
+    const result = await db.get(CACHE_STORE, cleanUrl);
+    if (!result) return null;
+    
+    const pendingRequests = await db.getAll(STORE_NAME);
+    if (!pendingRequests || pendingRequests.length === 0) {
+      return result.data;
+    }
+    
+    return patchCachedData(cleanUrl, result.data, pendingRequests);
   } catch (error) {
     console.error('Failed to get cached response', error);
     return null;
@@ -91,10 +305,10 @@ window.addEventListener('online', () => {
   processOfflineQueue();
 });
 
-// For Capacitor Android/iOS apps
 Network.addListener('networkStatusChange', status => {
   if (status.connected) {
     console.log('App is online (Capacitor). Processing offline queue...');
     processOfflineQueue();
   }
 });
+

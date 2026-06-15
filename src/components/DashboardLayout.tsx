@@ -55,7 +55,9 @@ const navItems: NavItem[] = [
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, updateUser } = useAuth();
-  const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+  const [networkState, setNetworkState] = React.useState<'online' | 'offline' | 'slow'>(
+    navigator.onLine ? 'online' : 'offline'
+  );
   const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
@@ -78,11 +80,19 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   React.useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleNetworkChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && customEvent.detail.state) {
+        setNetworkState(customEvent.detail.state);
+      }
+    };
+    const handleOnline = () => setNetworkState('online');
+    const handleOffline = () => setNetworkState('offline');
+    window.addEventListener('app-network-status', handleNetworkChange);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     return () => {
+      window.removeEventListener('app-network-status', handleNetworkChange);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -541,9 +551,15 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                 {location.pathname.replace('/', '') || 'Dashboard'}
               </h1>
               <div className="flex items-center gap-1 mt-0.5">
-                <div className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-emerald-500 animate-pulse" : "bg-red-500")} />
-                <span className={cn("text-[8px] font-black uppercase tracking-widest", isOnline ? "text-emerald-600" : "text-red-500")}>
-                  {isOnline ? "En Línea" : "Sin Conexión"}
+                <div className={cn(
+                  "w-1.5 h-1.5 rounded-full animate-pulse",
+                  networkState === 'online' ? "bg-emerald-500" : (networkState === 'slow' ? "bg-amber-500" : "bg-red-500")
+                )} />
+                <span className={cn(
+                  "text-[8px] font-black uppercase tracking-widest",
+                  networkState === 'online' ? "text-emerald-600" : (networkState === 'slow' ? "text-amber-500" : "text-red-500")
+                )}>
+                  {networkState === 'online' ? "En Línea" : (networkState === 'slow' ? "Red Lenta" : "Fuera de Línea")}
                 </span>
               </div>
             </div>
@@ -574,6 +590,53 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             </button>
           </div>
         </header>
+
+        {/* Banner de Estado de Red */}
+        <AnimatePresence>
+          {networkState !== 'online' && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className={cn(
+                "px-6 py-2.5 flex items-center justify-between transition-colors text-xs font-semibold shrink-0 gap-4 border-b",
+                networkState === 'offline' 
+                  ? "bg-amber-500/10 border-amber-500/20 text-amber-800 dark:text-amber-300"
+                  : "bg-blue-500/10 border-blue-500/20 text-blue-800 dark:text-blue-300"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Wifi className={cn("w-4 h-4 animate-pulse", networkState === 'offline' ? "text-amber-500" : "text-blue-505 text-blue-500")} />
+                <span>
+                  {networkState === 'offline' ? (
+                    <>
+                      <strong>Modo Fuera de Línea (Offline) activo.</strong> Las operaciones de creación, edición y eliminación de beneficiarios, actividades y asistencias se guardarán en tu dispositivo y se sincronizarán de forma autónoma tan pronto como vuelvas a conectarte.
+                    </>
+                  ) : (
+                    <>
+                      <strong>Red lenta o inestable de datos detectada.</strong> El sistema ha habilitado el acceso rápido local para que trabajes de forma ágil y evitar demoras de carga.
+                    </>
+                  )}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  const { processOfflineQueue } = await import('../lib/offlineSync');
+                  processOfflineQueue();
+                }}
+                className={cn(
+                  "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all select-none border whitespace-nowrap cursor-pointer",
+                  networkState === 'offline'
+                    ? "bg-amber-500 text-white hover:bg-amber-600 border-amber-600"
+                    : "bg-blue-500 text-white hover:bg-blue-600 border-blue-600"
+                )}
+              >
+                Probar Sincronización
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <section className="flex-1 overflow-y-auto p-4 md:p-8">
           <motion.div

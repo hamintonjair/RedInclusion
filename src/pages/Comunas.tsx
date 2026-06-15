@@ -73,6 +73,15 @@ export const Comunas: React.FC = () => {
 
   useEffect(() => {
     fetchComunas();
+
+    const handleSync = () => {
+      console.log('[OfflineSync] Sync event received in Comunas, refreshing...');
+      fetchComunas();
+    };
+    window.addEventListener('offline-record-synced', handleSync);
+    return () => {
+      window.removeEventListener('offline-record-synced', handleSync);
+    };
   }, []);
 
   const onSubmit = async (data: FormData) => {
@@ -245,7 +254,14 @@ export const Comunas: React.FC = () => {
                       </div>
                     </div>
                     
-                    <h3 className="text-lg font-bold text-slate-800 mb-1">{comuna.nombre}</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
+                      <span>{comuna.nombre}</span>
+                      {comuna._isOffline && (
+                        <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[8px] font-black uppercase rounded-md tracking-wider border border-amber-200 animate-pulse">
+                          Local
+                        </span>
+                      )}
+                    </h3>
                     <div className="flex items-start gap-2">
                        <Building2 size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
                       <p className="text-sm text-slate-500 font-medium leading-tight">{comuna.zona}</p>

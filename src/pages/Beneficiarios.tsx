@@ -441,6 +441,17 @@ export const ListadoBeneficiarios: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm, selectedLinea, currentPage, itemsPerPage]);
 
+  React.useEffect(() => {
+    const handleSync = () => {
+      console.log('[OfflineSync] Sync event received in Beneficiarios, refreshing...');
+      fetchBeneficiarios();
+    };
+    window.addEventListener('offline-record-synced', handleSync);
+    return () => {
+      window.removeEventListener('offline-record-synced', handleSync);
+    };
+  }, []);
+
   const handleDelete = async () => {
     if (!deleteId) return;
     if (user?.rol !== 'admin') {
@@ -582,7 +593,16 @@ export const ListadoBeneficiarios: React.FC = () => {
                 ) : (
                   beneficiarios.map((b) => (
                     <tr key={b._id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-5 text-sm font-semibold text-slate-700">{b.nombre_completo}</td>
+                      <td className="px-6 py-5 text-sm font-semibold text-slate-700">
+                        <div className="flex items-center gap-2">
+                          <span>{b.nombre_completo}</span>
+                          {b._isOffline && (
+                            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[8px] font-black uppercase rounded-md tracking-wider border border-amber-200 animate-pulse">
+                              Local
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-5 text-sm font-medium text-slate-600">{b.numero_documento}</td>
                       <td className="px-6 py-5">
                         <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-full border border-blue-100 uppercase">
