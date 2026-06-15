@@ -81,11 +81,42 @@ export async function saveOfflineRequest(config: InternalAxiosRequestConfig) {
     }
   }
 
+  // Sanitize headers to prevent DataCloneError (serialize as simple plain objects)
+  let cleanHeaders: any = {};
+  if (config.headers) {
+    try {
+      const rawHeaders = typeof (config.headers as any).toJSON === 'function'
+        ? (config.headers as any).toJSON()
+        : config.headers;
+
+      for (const key in rawHeaders) {
+        if (Object.prototype.hasOwnProperty.call(rawHeaders, key)) {
+          const value = rawHeaders[key];
+          if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+            cleanHeaders[key] = value;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error cleaning headers for offline sync:', e);
+    }
+  }
+
+  // Ensure data is structured cloneable (remove prototypes, functions, proxies, etc.)
+  let cleanData = config.data;
+  if (cleanData && typeof cleanData === 'object') {
+    try {
+      cleanData = JSON.parse(JSON.stringify(cleanData));
+    } catch (e) {
+      console.error('Error serializing data for offline sync:', e);
+    }
+  }
+
   await db.add(STORE_NAME, {
     url: config.url,
     method: config.method,
-    data: config.data,
-    headers: config.headers,
+    data: cleanData,
+    headers: cleanHeaders,
     timestamp: Date.now(),
     offlineId: offlineId || undefined,
   });
@@ -169,7 +200,11 @@ export async function cacheResponse(url: string, data: any) {
   try {
     const db = await getDB();
     const cleanUrl = normalizeCacheUrl(url);
-    await db.put(CACHE_STORE, { url: cleanUrl, data, timestamp: Date.now() });
+    let serializedData = data;
+    try {
+      serializedData = JSON.parse(JSON.stringify(data));
+    } catch (e) {}
+    await db.put(CACHE_STORE, { url: cleanUrl, data: serializedData, timestamp: Date.now() });
   } catch (error) {
     console.error('Failed to cache response', error);
   }

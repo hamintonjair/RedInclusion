@@ -60,10 +60,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Login exitoso, guardando usuario...');
       setUser(userData);
       localStorage.setItem('auth_user', JSON.stringify(userData));
+      
+      // Guardar credenciales locales de respaldo de forma segura para permitir inicio de sesión offline
+      try {
+        const cachedStr = localStorage.getItem('cached_users_auth') || '[]';
+        const cached = JSON.parse(cachedStr);
+        const filtered = cached.filter((item: any) => item.email.toLowerCase() !== email.toLowerCase().trim());
+        filtered.push({
+          email: email.toLowerCase().trim(),
+          password: pass,
+          userData
+        });
+        localStorage.setItem('cached_users_auth', JSON.stringify(filtered));
+      } catch (err) {
+        console.error('Error al guardar credenciales en caché:', err);
+      }
+
       setIsLoading(false);
       return true;
     } catch (error: any) {
       console.error('Error detallado de login:', error.response?.status, error.response?.data || error.message);
+      
+      // Comprobar si el error se debe a falta de internet
+      const isOfflineErr = !navigator.onLine || 
+                           error.message?.includes('Network') || 
+                           error.code === 'ERR_NETWORK' || 
+                           error.status === 0 || 
+                           !error.response;
+                           
+      if (isOfflineErr) {
+        console.warn('[Offline] Sin conexión detectada. Buscando credenciales locales...');
+        try {
+          const cachedStr = localStorage.getItem('cached_users_auth') || '[]';
+          const cached = JSON.parse(cachedStr);
+          const found = cached.find((item: any) => 
+            item.email.toLowerCase() === email.toLowerCase().trim() && 
+            item.password === pass
+          );
+          
+          if (found) {
+            console.log('[Offline] Inició sesión local con éxito!');
+            setUser(found.userData);
+            localStorage.setItem('auth_user', JSON.stringify(found.userData));
+            setIsLoading(false);
+            return true;
+          }
+        } catch (err) {
+          console.error('[Offline] Error buscando credenciales locales:', err);
+        }
+      }
+      
       setIsLoading(false);
       return false;
     }
