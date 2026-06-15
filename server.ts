@@ -8,6 +8,19 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+function safeObjectId(id: any): any {
+  if (!id) return id;
+  const strId = String(id).trim();
+  if (strId.length === 24 && /^[0-9a-fA-F]{24}$/.test(strId)) {
+    try {
+      return new ObjectId(strId);
+    } catch (e) {
+      return strId;
+    }
+  }
+  return strId;
+}
+
 async function startServer() {
   console.log("Starting server... NODE_ENV:", process.env.NODE_ENV);
   const app = express();
@@ -35,6 +48,28 @@ async function startServer() {
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  // Middleware to sanitize request bodies from offline-temporary identifiers (such as _id, id, and _isOffline)
+  app.use((req, _res, next) => {
+    if (req.body && typeof req.body === 'object') {
+      // 1. If we have _isOffline, strip it from database inputs
+      if (req.body._isOffline !== undefined) {
+        delete req.body._isOffline;
+      }
+      
+      // 2. Strip _id and id properties if they are temporary "offline_" strings,
+      // so MongoDB auto-generates clean, indexable ObjectIds as primary keys on insert.
+      if (req.method === 'POST') {
+        if (typeof req.body._id === 'string' && req.body._id.startsWith('offline_')) {
+          delete req.body._id;
+        }
+        if (typeof req.body.id === 'string' && req.body.id.startsWith('offline_')) {
+          delete req.body.id;
+        }
+      }
+    }
+    next();
+  });
 
   // Logger para depurar peticiones (especialmente desde la App móvil)
   app.use((req, _res, next) => {
@@ -541,7 +576,7 @@ async function startServer() {
   app.get("/api/funcionarios", async (req, res) => {
     if (!db) return res.json([]);
     try {
-      const funcionarios = await db.collection('funcionarios').find({ estado: 'Activo' }).toArray();
+      const funcionarios = await db.collection('funcionarios').find({ estado: 'Activo' }).sort({ fecha_registro: -1 }).toArray();
       res.json(funcionarios);
     } catch (error) {
       res.status(500).json({ error: "Error al obtener funcionarios" });
@@ -559,7 +594,7 @@ async function startServer() {
       { _id: '6', nombre: 'Comuna 6', zona: 'Jardín' }
     ]);
     try {
-      const comunas = await db.collection('comunas').find().toArray();
+      const comunas = await db.collection('comunas').find().sort({ fecha_registro: -1, _id: -1 }).toArray();
       if (comunas.length === 0) {
         return res.json([
           { _id: 'mock1', nombre: 'Comuna 1', zona: 'Zona Norte' },
@@ -597,7 +632,7 @@ async function startServer() {
       const { _id, ...updateData } = req.body;
       const { ObjectId } = await import('mongodb');
       const result = await db.collection('comunas').updateOne(
-        { _id: new ObjectId(id) },
+        { _id: safeObjectId(id) },
         { $set: updateData }
       );
       if (result.matchedCount === 0) return res.status(404).json({ error: "Not found" });
@@ -612,7 +647,7 @@ async function startServer() {
     try {
       const { id } = req.params;
       const { ObjectId } = await import('mongodb');
-      const result = await db.collection('comunas').deleteOne({ _id: new ObjectId(id) });
+      const result = await db.collection('comunas').deleteOne({ _id: safeObjectId(id) });
       if (result.deletedCount === 0) return res.status(404).json({ error: "Not found" });
       res.json({ message: "Deleted successfully" });
     } catch (error) {
@@ -657,7 +692,7 @@ async function startServer() {
       }
 
       const result = await db.collection('funcionarios').updateOne(
-        { _id: new ObjectId(id) },
+        { _id: safeObjectId(id) },
         { $set: finalUpdate }
       );
       
@@ -677,7 +712,7 @@ async function startServer() {
       // We can do a logical delete or a physical one. User said "eliminar como tal" for lines, 
       // but let's see if they want logical for staff. Usually status update is safer.
       // But they said for lines "eliminar como tal", so I'll do physical delete here too if they don't specify.
-      const result = await db.collection('funcionarios').deleteOne({ _id: new ObjectId(id) });
+      const result = await db.collection('funcionarios').deleteOne({ _id: safeObjectId(id) });
       
       if (result.deletedCount === 0) return res.status(404).json({ error: "Not found" });
       res.json({ message: "Deleted successfully" });
@@ -694,7 +729,7 @@ async function startServer() {
       { _id: '3', nombre: 'Juventud', descripcion: 'Ejes transversales para el desarrollo juvenil.', fecha_creacion: new Date().toISOString(), estado: 'Activo' }
     ]);
     try {
-      const lineas = await db.collection('lineas_trabajo').find({ estado: 'Activo' }).toArray();
+      const lineas = await db.collection('lineas_trabajo').find({ estado: 'Activo' }).sort({ fecha_creacion: -1 }).toArray();
       if (lineas.length === 0) {
         return res.json([
           { _id: 'mock1', nombre: 'Adulto Mayor', descripcion: 'Programa de atención integral al adulto mayor.', fecha_creacion: new Date().toISOString(), estado: 'Activo' },
@@ -731,7 +766,7 @@ async function startServer() {
       const { ObjectId } = await import('mongodb');
       
       const result = await db.collection('lineas_trabajo').updateOne(
-        { _id: new ObjectId(id) },
+        { _id: safeObjectId(id) },
         { $set: { ...updateData, fecha_actualizacion: new Date().toISOString() } }
       );
       
@@ -749,7 +784,7 @@ async function startServer() {
       const { ObjectId } = await import('mongodb');
       
       const result = await db.collection('lineas_trabajo').deleteOne(
-        { _id: new ObjectId(id) }
+        { _id: safeObjectId(id) }
       );
       
       if (result.deletedCount === 0) return res.status(404).json({ error: "Not found" });
@@ -1019,7 +1054,7 @@ async function startServer() {
     try {
       const { id } = req.params;
       const { ObjectId } = await import('mongodb');
-      const b = await db.collection('beneficiarios').findOne({ _id: new ObjectId(id) });
+      const b = await db.collection('beneficiarios').findOne({ _id: safeObjectId(id) });
       if (!b) return res.status(404).json({ error: "Not found" });
       res.json(b);
     } catch (error) {
@@ -1041,7 +1076,7 @@ async function startServer() {
       if (sanitizedBody.correo_electronico) sanitizedBody.correo_electronico = sanitizedBody.correo_electronico.toString().trim().toLowerCase();
       
       const result = await db.collection('beneficiarios').updateOne(
-        { _id: new ObjectId(id) },
+        { _id: safeObjectId(id) },
         { $set: { ...sanitizedBody, fecha_actualizacion: new Date().toISOString() } }
       );
       
@@ -1060,7 +1095,7 @@ async function startServer() {
       const { ObjectId } = await import('mongodb');
       
       const result = await db.collection('beneficiarios').deleteOne({ 
-        _id: new ObjectId(id) 
+        _id: safeObjectId(id) 
       });
       
       if (result.deletedCount === 0) return res.status(404).json({ error: "Not found" });
@@ -1100,17 +1135,17 @@ async function startServer() {
       ]);
     }
     try {
-      let list = await db.collection('actividades').find({}).toArray();
+      let list = await db.collection('actividades').find({}).sort({ fecha_creacion: -1, _id: -1 }).toArray();
       if (list.length === 0) {
         // Seed some initial ones so the user can see them instantly
         const initial = [
-          { nombre: "Taller de Inclusión Digital", linea: "Juventud", fecha: "2026-06-10", lugar: "Auditorio de la Alcaldía", estado: "Planificada", facilitador: "Yordan Solis", cupos: 30 },
-          { nombre: "Jornada de Salud Física y Mental", linea: "Adulto Mayor", fecha: "2026-06-15", lugar: "Centro de Vida Comuna 1", estado: "Planificada", facilitador: "Maria Chaverra", cupos: 50 },
-          { nombre: "Conversatorio Emprendimiento Étnico", linea: "Género y Diversidad", fecha: "2026-06-08", lugar: "Sede Comunal Medrano", estado: "En Curso", facilitador: "Yordan Solis", cupos: 25 },
-          { nombre: "Capacitación de Liderazgo Comunitario", linea: "General", fecha: "2026-05-20", lugar: "Casa de Justicia", estado: "Realizada", facilitador: "Yordan Solis", cupos: 40 }
+          { nombre: "Taller de Inclusión Digital", linea: "Juventud", fecha: "2026-06-10", lugar: "Auditorio de la Alcaldía", estado: "Planificada", facilitador: "Yordan Solis", cupos: 30, fecha_creacion: new Date('2026-06-10T10:00:00Z').toISOString() },
+          { nombre: "Jornada de Salud Física y Mental", linea: "Adulto Mayor", fecha: "2026-06-15", lugar: "Centro de Vida Comuna 1", estado: "Planificada", facilitador: "Maria Chaverra", cupos: 50, fecha_creacion: new Date('2026-06-11T12:00:00Z').toISOString() },
+          { nombre: "Conversatorio Emprendimiento Étnico", linea: "Género y Diversidad", fecha: "2026-06-08", lugar: "Sede Comunal Medrano", estado: "En Curso", facilitador: "Yordan Solis", cupos: 25, fecha_creacion: new Date('2026-06-12T09:00:00Z').toISOString() },
+          { nombre: "Capacitación de Liderazgo Comunitario", linea: "General", fecha: "2026-05-20", lugar: "Casa de Justicia", estado: "Realizada", facilitador: "Yordan Solis", cupos: 40, fecha_creacion: new Date('2026-06-13T15:00:00Z').toISOString() }
         ];
         await db.collection('actividades').insertMany(initial);
-        list = await db.collection('actividades').find({}).toArray();
+        list = await db.collection('actividades').find({}).sort({ fecha_creacion: -1, _id: -1 }).toArray();
       }
       res.json(list);
     } catch (error) {
@@ -1124,7 +1159,7 @@ async function startServer() {
     try {
       const { id } = req.params;
       const { ObjectId } = await import('mongodb');
-      const act = await db.collection('actividades').findOne({ _id: new ObjectId(id) });
+      const act = await db.collection('actividades').findOne({ _id: safeObjectId(id) });
       
       if (!act) return res.status(404).json({ error: "Not found" });
       
@@ -1174,7 +1209,7 @@ async function startServer() {
       const { _id, asistentes_detalles, ...updateData } = req.body;
       
       const result = await db.collection('actividades').updateOne(
-        { _id: new ObjectId(id) },
+        { _id: safeObjectId(id) },
         { $set: updateData }
       );
       
@@ -1192,7 +1227,7 @@ async function startServer() {
     try {
       const { id } = req.params;
       const { ObjectId } = await import('mongodb');
-      const result = await db.collection('actividades').deleteOne({ _id: new ObjectId(id) });
+      const result = await db.collection('actividades').deleteOne({ _id: safeObjectId(id) });
       if (result.deletedCount === 0) return res.status(404).json({ error: "Actividad no encontrada" });
       res.json({ message: "Actividad eliminada con éxito" });
     } catch (error) {
@@ -1524,7 +1559,7 @@ async function startServer() {
         updateData.cedula = updateData.cedula.toString().trim();
         const existing = await db.collection('asistentes').findOne({
           cedula: updateData.cedula,
-          _id: { $ne: new ObjectId(id) }
+          _id: { $ne: safeObjectId(id) }
         });
         if (existing) {
           return res.status(400).json({ error: "Ya existe otro asistente registrado con esta cédula" });
@@ -1534,14 +1569,14 @@ async function startServer() {
       updateData.fecha_actualizacion = new Date().toISOString();
 
       const result = await db.collection('asistentes').updateOne(
-        { _id: new ObjectId(id) },
+        { _id: safeObjectId(id) },
         { $set: updateData }
       );
 
       let result2: any = { matchedCount: 0 };
       try {
         result2 = await db.collection('asistentes.asistentes').updateOne(
-          { _id: new ObjectId(id) },
+          { _id: safeObjectId(id) },
           { $set: updateData }
         );
       } catch (err) {
@@ -1577,10 +1612,10 @@ async function startServer() {
       const { id } = req.params;
       const { ObjectId } = await import('mongodb');
 
-      const result1 = await db.collection('asistentes').deleteOne({ _id: new ObjectId(id) });
+      const result1 = await db.collection('asistentes').deleteOne({ _id: safeObjectId(id) });
       let result2: any = { deletedCount: 0 };
       try {
-        result2 = await db.collection('asistentes.asistentes').deleteOne({ _id: new ObjectId(id) });
+        result2 = await db.collection('asistentes.asistentes').deleteOne({ _id: safeObjectId(id) });
       } catch (err) {
         console.error("Error deleting from 'asistentes.asistentes':", err);
       }

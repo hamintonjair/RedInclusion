@@ -238,7 +238,7 @@ export const Comunas: React.FC = () => {
                       <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-brand-green/10 group-hover:text-brand-green transition-colors">
                         <MapPin size={24} />
                       </div>
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-2">
                         <button 
                           onClick={() => handleEdit(comuna)}
                           className="p-2 text-brand-green hover:bg-emerald-50 rounded-lg transition-colors"

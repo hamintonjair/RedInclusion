@@ -81,15 +81,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error('Error detallado de login:', error.response?.status, error.response?.data || error.message);
       
-      // Comprobar si el error se debe a falta de internet
-      const isOfflineErr = !navigator.onLine || 
-                           error.message?.includes('Network') || 
-                           error.code === 'ERR_NETWORK' || 
-                           error.status === 0 || 
-                           !error.response;
+      // Si el error no es una respuesta de credenciales inválidas (401 o 400), asumimos error de red o servidor
+      const isInvalidCredentials = error.response && (error.response.status === 401 || error.response.status === 400);
                            
-      if (isOfflineErr) {
-        console.warn('[Offline] Sin conexión detectada. Buscando credenciales locales...');
+      if (!isInvalidCredentials) {
+        console.warn('[Offline] Sin conexión o problema en servidor. Buscando credenciales locales...');
         try {
           const cachedStr = localStorage.getItem('cached_users_auth') || '[]';
           const cached = JSON.parse(cachedStr);

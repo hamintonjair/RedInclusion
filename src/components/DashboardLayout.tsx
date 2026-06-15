@@ -98,6 +98,28 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, []);
 
+  // Proactive automatic synchronization of the offline queue in the background
+  React.useEffect(() => {
+    if (networkState === 'online') {
+      console.log('[DashboardLayout] Network is online. Triggering automatic background synchronization of offline queue...');
+      const triggerQueueSync = async () => {
+        try {
+          const { processOfflineQueue } = await import('../lib/offlineSync');
+          await processOfflineQueue();
+        } catch (e) {
+          console.error('[DashboardLayout] Automatic background sync failed:', e);
+        }
+      };
+
+      // 1.5 seconds delay to allow connection stability of the platform
+      const timer = setTimeout(() => {
+        triggerQueueSync();
+      }, 1500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [networkState]);
+
   const [isOpen, setIsOpen] = React.useState(true);
   const [isGestionExpanded, setIsGestionExpanded] = React.useState(true);
   const location = useLocation();

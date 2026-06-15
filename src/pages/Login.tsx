@@ -28,7 +28,11 @@ export const Login: React.FC = () => {
       const from = (location.state as any)?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     } else {
-      setError('Credenciales incorrectas. Verifique su correo y contraseña.');
+      if (!navigator.onLine) {
+        setError('No tienes conexión a internet y no hay credenciales locales guardadas para este usuario en este dispositivo. Por favor, inicia sesión al menos una vez con internet.');
+      } else {
+        setError('Credenciales incorrectas o error de red. Verifique su correo y contraseña.');
+      }
     }
   };
 
