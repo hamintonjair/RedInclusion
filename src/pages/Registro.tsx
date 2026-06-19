@@ -216,10 +216,9 @@ export const Registro: React.FC = () => {
     return found ? found.nombre : targetLinea;
   }, [editId, recordData, user, lineas]);
 
+
   const isMigrantesLine = userLineaNombre.toLowerCase().includes('migrante') || userLineaNombre.toLowerCase().includes('población migrante');
 
-
-  // Validar cedula existente
   React.useEffect(() => {
     if (editId) return; // No validar si estamos editando
     const trimmed = numero_doc?.toString().trim();
