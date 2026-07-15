@@ -44,7 +44,7 @@ Este documento detalla todos los campos utilizados en el formulario de registro 
 ## 4. Información de Población Migrante (Conditional)
 - `eres_desplazado` (Boolean): ¿Es la persona desplazada?
 - `tipo_pobreza` (String - Select): Categorización según el SISBEN.
-  - Opciones: Pobreza extrema (A), Pobreza moderada (B), Vulnerable (C), No pobre, no vulnerable.
+  - Opciones: Pobreza extrema (A), Pobreza moderada (B), Vulnerable (C), No pobre, no vulnerable, En proceso, No tiene.
 - `mujeres_hogar` (String): Cantidad de mujeres en el hogar.
 - `ninos_hogar` (String): Cantidad de niños en el hogar.
 - `adolescentes_hogar` (String): Cantidad de adolescentes en el hogar.

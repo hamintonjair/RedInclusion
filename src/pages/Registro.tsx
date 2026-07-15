@@ -722,6 +722,8 @@ export const Registro: React.FC = () => {
                 <option value="Pobreza moderada (B)">Pobreza moderada (B)</option>
                 <option value="Vulnerable (C)">Vulnerable (C)</option>
                 <option value="No pobre, no vulnerable">No pobre, no vulnerable</option>
+                <option value="En proceso">En proceso</option>
+                <option value="No tiene">No tiene</option>
               </SelectField>
             </div>
 
