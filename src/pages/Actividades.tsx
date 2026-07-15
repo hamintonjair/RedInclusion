@@ -1228,7 +1228,13 @@ export default function Actividades() {
       link.setAttribute('download', `Asistencia_${act.tema || act.nombre || 'Actividad'}.xlsx`);
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      
+      // Safe remove to prevent "Uncaught NotFoundError: Failed to execute 'removeChild' on 'Node'"
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+      }, 100);
     } catch (e) {
       console.error('Error generating Excel file with ExcelJS:', e);
     }

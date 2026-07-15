@@ -47,7 +47,16 @@ function saveToLocalStorageFallback(storeName: string, item: any) {
     if (storeName === CACHE_STORE) {
       const filtered = existing.filter((i: any) => i.url !== item.url);
       filtered.push(item);
-      localStorage.setItem(key, JSON.stringify(filtered));
+      try {
+        localStorage.setItem(key, JSON.stringify(filtered));
+      } catch (innerError: any) {
+        if (innerError.name === 'QuotaExceededError' || innerError.code === 22) {
+          console.warn('[OfflineSync-Fallback] LocalStorage quota exceeded for requestCache. Clearing cache fallback and retrying...');
+          localStorage.setItem(key, JSON.stringify([item]));
+        } else {
+          throw innerError;
+        }
+      }
     } else {
       if (!item.id) {
         item.id = Date.now() + Math.random();
