@@ -350,17 +350,14 @@ export const ListadoBeneficiarios: React.FC = () => {
       const blob = new Blob([xmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `reporte_${cleanFilterName}_${dateStr}.xls`);
-      document.body.appendChild(link);
+      link.href = url;
+      link.download = `reporte_${cleanFilterName}_${dateStr}.xls`;
       link.click();
       
-      // Safe remove to prevent "Uncaught NotFoundError: Failed to execute 'removeChild' on 'Node'"
+      // Revoke the object URL to free up memory
       setTimeout(() => {
-        if (document.body.contains(link)) {
-          document.body.removeChild(link);
-        }
-      }, 100);
+        URL.revokeObjectURL(url);
+      }, 1000);
 
       setIsExportOpen(false);
     } catch (error) {

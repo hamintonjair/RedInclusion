@@ -1224,17 +1224,14 @@ export default function Actividades() {
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `Asistencia_${act.tema || act.nombre || 'Actividad'}.xlsx`);
-      document.body.appendChild(link);
+      link.href = url;
+      link.download = `Asistencia_${act.tema || act.nombre || 'Actividad'}.xlsx`;
       link.click();
       
-      // Safe remove to prevent "Uncaught NotFoundError: Failed to execute 'removeChild' on 'Node'"
+      // Revoke the object URL to free up memory
       setTimeout(() => {
-        if (document.body.contains(link)) {
-          document.body.removeChild(link);
-        }
-      }, 100);
+        URL.revokeObjectURL(url);
+      }, 1000);
     } catch (e) {
       console.error('Error generating Excel file with ExcelJS:', e);
     }
