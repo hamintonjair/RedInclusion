@@ -824,7 +824,26 @@ async function startServer() {
       }
 
       const b = await db.collection('beneficiarios').findOne(query);
-      res.json({ exists: !!b, nombre: b?.nombre_completo || b?.nombre || "Usuario registrado" });
+      
+      let linea_nombre = "General";
+      if (b && b.linea_trabajo) {
+        let queryLinea: any = { nombre: b.linea_trabajo };
+        if (/^[0-9a-fA-F]{24}$/.test(String(b.linea_trabajo))) {
+          queryLinea = { $or: [ { _id: safeObjectId(b.linea_trabajo) }, { nombre: b.linea_trabajo } ] };
+        }
+        const lineaObj = await db.collection('lineas_trabajo').findOne(queryLinea);
+        if (lineaObj) {
+          linea_nombre = lineaObj.nombre;
+        } else {
+          linea_nombre = b.linea_trabajo;
+        }
+      }
+
+      res.json({ 
+        exists: !!b, 
+        nombre: b?.nombre_completo || b?.nombre || "Usuario registrado",
+        linea_nombre: linea_nombre
+      });
     } catch (error) {
       console.error('Check doc error:', error);
       res.status(500).json({ error: "Error al verificar documento" });

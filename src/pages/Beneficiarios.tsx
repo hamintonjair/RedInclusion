@@ -336,11 +336,22 @@ export const ListadoBeneficiarios: React.FC = () => {
  </Worksheet>
 </Workbook>`;
 
+      const filterName = selectedLinea || 'Todas las Líneas';
+      const cleanFilterName = filterName
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // remove accents/diacritics
+        .replace(/[^a-z0-9_\-]/g, "_")  // replace spaces and non-alphanumeric chars with underscores
+        .replace(/__+/g, "_")           // normalize consecutive underscores
+        .replace(/^_+|_+$/g, "");        // trim leading/trailing underscores
+
+      const dateStr = new Date().toISOString().split('T')[0];
+
       const blob = new Blob([xmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `reporte_beneficiarios_${new Date().toISOString().split('T')[0]}.xls`);
+      link.setAttribute('download', `reporte_${cleanFilterName}_${dateStr}.xls`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

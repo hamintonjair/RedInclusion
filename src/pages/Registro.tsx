@@ -74,7 +74,7 @@ export const Registro: React.FC = () => {
   const [lineas, setLineas] = React.useState<any[]>([]);
   const [recordData, setRecordData] = React.useState<any>(null);
   const [checkingDoc, setCheckingDoc] = React.useState(false);
-  const [docExists, setDocExists] = React.useState<{ exists: boolean; nombre: string | null } | null>(null);
+  const [docExists, setDocExists] = React.useState<{ exists: boolean; nombre: string | null; linea_nombre?: string } | null>(null);
   const [checkingEmail, setCheckingEmail] = React.useState(false);
   const [emailExists, setEmailExists] = React.useState<{ exists: boolean; nombre: string | null } | null>(null);
   const [successModal, setSuccessModal] = React.useState<{message: string; isUpdate: boolean} | null>(null);
@@ -349,7 +349,8 @@ export const Registro: React.FC = () => {
   const onSubmit = async (data: FormData) => {
     // Verificar si el documento ya está registrado en la base de datos para prevenir duplicados
     if (!editId && docExists?.exists) {
-      setErrorMessage(`El número de documento "${numero_doc}" ya se encuentra registrado a nombre de "${docExists.nombre}". No se permiten registros duplicados en ninguna línea de trabajo.`);
+      const lineaTexto = docExists.linea_nombre ? ` en la línea de trabajo "${docExists.linea_nombre}"` : "";
+      setErrorMessage(`El número de documento "${numero_doc}" ya se encuentra registrado a nombre de "${docExists.nombre}"${lineaTexto}. No se permiten registros duplicados en ninguna línea de trabajo.`);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -533,7 +534,7 @@ export const Registro: React.FC = () => {
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     </div>
                     <p className="text-[10px] font-bold text-red-800 leading-tight">
-                      ¡ALERTA! Este documento ya existe: <span className="uppercase">{docExists.nombre}</span>.
+                      ¡ALERTA! Este documento ya existe: <span className="uppercase">{docExists.nombre}</span>{docExists.linea_nombre ? ` (Línea: ${docExists.linea_nombre})` : ''}.
                     </p>
                   </motion.div>
                 )}
