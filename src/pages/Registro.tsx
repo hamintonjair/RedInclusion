@@ -347,6 +347,13 @@ export const Registro: React.FC = () => {
   const barrios = barriosPorComuna.find(c => c.comuna === selectedComuna)?.barrios || [];
 
   const onSubmit = async (data: FormData) => {
+    // Verificar si el documento ya está registrado en la base de datos para prevenir duplicados
+    if (!editId && docExists?.exists) {
+      setErrorMessage(`El número de documento "${numero_doc}" ya se encuentra registrado a nombre de "${docExists.nombre}". No se permiten registros duplicados en ninguna línea de trabajo.`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     const currentFirma = watch('firma') || data.firma;
     const inlinePadHasSignature = sigPad.current && !sigPad.current.isEmpty();
     
