@@ -1094,6 +1094,37 @@ async function startServer() {
       if (sanitizedBody.numero_documento) sanitizedBody.numero_documento = sanitizedBody.numero_documento.toString().trim();
       if (sanitizedBody.correo_electronico) sanitizedBody.correo_electronico = sanitizedBody.correo_electronico.toString().trim().toLowerCase();
       
+      if (sanitizedBody.numero_documento) {
+        const docTrimmed = sanitizedBody.numero_documento.toString().trim();
+        const docNum = Number(docTrimmed);
+        const queryCheck: any = {
+          _id: { $ne: safeObjectId(id) },
+          $or: [
+            { numero_documento: docTrimmed },
+            { numero_documento: { $regex: new RegExp(`^\\s*${docTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') } },
+            { identificacion: docTrimmed },
+            { identificacion: { $regex: new RegExp(`^\\s*${docTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') } },
+            { numero_identificacion: docTrimmed },
+            { numero_identificacion: { $regex: new RegExp(`^\\s*${docTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') } },
+            { cedula: docTrimmed },
+            { cedula: { $regex: new RegExp(`^\\s*${docTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') } }
+          ]
+        };
+        if (!isNaN(docNum)) {
+          queryCheck.$or.push({ numero_documento: docNum });
+          queryCheck.$or.push({ identificacion: docNum });
+          queryCheck.$or.push({ numero_identificacion: docNum });
+          queryCheck.$or.push({ cedula: docNum });
+        }
+
+        const existingDoc = await db.collection('beneficiarios').findOne(queryCheck);
+        if (existingDoc) {
+          return res.status(409).json({ 
+            error: `El documento "${docTrimmed}" ya se encuentra registrado a nombre de "${existingDoc.nombre_completo || existingDoc.nombre || 'otro usuario'}".` 
+          });
+        }
+      }
+
       const result = await db.collection('beneficiarios').updateOne(
         { _id: safeObjectId(id) },
         { $set: { ...sanitizedBody, fecha_actualizacion: new Date().toISOString() } }
@@ -1131,6 +1162,36 @@ async function startServer() {
       const sanitizedBody = { ...req.body };
       if (sanitizedBody.numero_documento) sanitizedBody.numero_documento = sanitizedBody.numero_documento.toString().trim();
       if (sanitizedBody.correo_electronico) sanitizedBody.correo_electronico = sanitizedBody.correo_electronico.toString().trim().toLowerCase();
+
+      if (sanitizedBody.numero_documento) {
+        const docTrimmed = sanitizedBody.numero_documento.toString().trim();
+        const docNum = Number(docTrimmed);
+        const queryCheck: any = {
+          $or: [
+            { numero_documento: docTrimmed },
+            { numero_documento: { $regex: new RegExp(`^\\s*${docTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') } },
+            { identificacion: docTrimmed },
+            { identificacion: { $regex: new RegExp(`^\\s*${docTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') } },
+            { numero_identificacion: docTrimmed },
+            { numero_identificacion: { $regex: new RegExp(`^\\s*${docTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') } },
+            { cedula: docTrimmed },
+            { cedula: { $regex: new RegExp(`^\\s*${docTrimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') } }
+          ]
+        };
+        if (!isNaN(docNum)) {
+          queryCheck.$or.push({ numero_documento: docNum });
+          queryCheck.$or.push({ identificacion: docNum });
+          queryCheck.$or.push({ numero_identificacion: docNum });
+          queryCheck.$or.push({ cedula: docNum });
+        }
+
+        const existingDoc = await db.collection('beneficiarios').findOne(queryCheck);
+        if (existingDoc) {
+          return res.status(409).json({ 
+            error: `El documento "${docTrimmed}" ya se encuentra registrado a nombre de "${existingDoc.nombre_completo || existingDoc.nombre || 'otro usuario'}".` 
+          });
+        }
+      }
 
       const data = {
         ...sanitizedBody,

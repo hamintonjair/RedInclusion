@@ -347,12 +347,29 @@ export const Registro: React.FC = () => {
   const barrios = barriosPorComuna.find(c => c.comuna === selectedComuna)?.barrios || [];
 
   const onSubmit = async (data: FormData) => {
+    if (isSubmitting) return;
+
     // Verificar si el documento ya está registrado en la base de datos para prevenir duplicados
-    if (!editId && docExists?.exists) {
-      const lineaTexto = docExists.linea_nombre ? ` en la línea de trabajo "${docExists.linea_nombre}"` : "";
-      setErrorMessage(`El número de documento "${numero_doc}" ya se encuentra registrado a nombre de "${docExists.nombre}"${lineaTexto}. No se permiten registros duplicados en ninguna línea de trabajo.`);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
+    if (!editId && numero_doc) {
+      if (docExists?.exists) {
+        const lineaTexto = docExists.linea_nombre ? ` en la línea de trabajo "${docExists.linea_nombre}"` : "";
+        setErrorMessage(`El número de documento "${numero_doc}" ya se encuentra registrado a nombre de "${docExists.nombre}"${lineaTexto}. No se permiten registros duplicados en ninguna línea de trabajo.`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // Verificación directa en el servidor al momento de enviar por si aún no se había disparado el blur
+      try {
+        const checkRes = await api.get(`/beneficiarios/check/${numero_doc.trim()}`);
+        if (checkRes.data && checkRes.data.exists) {
+          const lineaTexto = checkRes.data.linea_nombre ? ` en la línea de trabajo "${checkRes.data.linea_nombre}"` : "";
+          setErrorMessage(`El número de documento "${numero_doc}" ya se encuentra registrado a nombre de "${checkRes.data.nombre}"${lineaTexto}. No se permiten registros duplicados.`);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+      } catch (err) {
+        console.warn('Error comprobando documento en submit:', err);
+      }
     }
 
     const currentFirma = watch('firma') || data.firma;
