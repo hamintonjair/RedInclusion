@@ -707,8 +707,8 @@ export default function Actividades() {
 
     const generateCursiveSignature = (name: string): string => {
       const canvas = document.createElement('canvas');
-      canvas.width = 600;
-      canvas.height = 180;
+      canvas.width = 1200;
+      canvas.height = 140;
       const ctx = canvas.getContext('2d');
       if (!ctx) return '';
 
@@ -719,32 +719,35 @@ export default function Actividades() {
       const colors = ['#0F2942', '#1B365D', '#031B33', '#1C2E4A'];
       const inkColor = colors[Math.floor(Math.random() * colors.length)];
 
-      ctx.font = 'italic 75px "Caveat", "Brush Script MT", "Lucida Handwriting", "Comic Sans MS", "Segoe Print", cursive';
+      ctx.font = 'italic 48px "Caveat", "Brush Script MT", "Lucida Handwriting", "Comic Sans MS", "Segoe Print", cursive';
       ctx.fillStyle = inkColor;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      const parts = name.trim().split(/\s+/);
-      let signatureText = parts[0];
-      if (parts.length > 1 && parts[1].length > 1) {
-        signatureText += ' ' + parts[1][0] + '.';
+      const parts = name.trim().split(/\s+/).filter(Boolean);
+      // Elongate name: show first name and first surname if present so signature is long and clearly readable
+      let signatureText = parts[0] || '';
+      if (parts.length > 2) {
+        signatureText += ' ' + parts[2];
+      } else if (parts.length > 1) {
+        signatureText += ' ' + parts[1];
       }
 
       ctx.save();
-      ctx.translate(canvas.width / 2, canvas.height / 2 - 5);
-      const angle = (Math.random() * 8 - 4) * Math.PI / 180;
+      ctx.translate(canvas.width / 2, canvas.height / 2 - 8);
+      const angle = (Math.random() * 4 - 2) * Math.PI / 180;
       ctx.rotate(angle);
       ctx.fillText(signatureText, 0, 0);
       ctx.restore();
 
       ctx.strokeStyle = inkColor;
-      ctx.lineWidth = 2.5 + Math.random() * 1.0;
+      ctx.lineWidth = 2.2 + Math.random() * 0.8;
       ctx.beginPath();
-      ctx.moveTo(30 + Math.random() * 15, canvas.height * 0.72 + (Math.random() * 4 - 2));
+      ctx.moveTo(35 + Math.random() * 15, canvas.height * 0.78);
       ctx.bezierCurveTo(
-        120 + Math.random() * 20, canvas.height * (0.64 + Math.random() * 0.08),
-        380 + Math.random() * 20, canvas.height * (0.74 + Math.random() * 0.08),
-        canvas.width - 30 - Math.random() * 15, canvas.height * 0.72 + (Math.random() * 4 - 2)
+        canvas.width * 0.25, canvas.height * 0.70,
+        canvas.width * 0.70, canvas.height * 0.84,
+        canvas.width - 35, canvas.height * 0.78
       );
       ctx.stroke();
 
@@ -882,7 +885,7 @@ export default function Actividades() {
       }
 
       if (key === 'firma') {
-        calculatedWidth = 100;
+        calculatedWidth = 160;
       }
 
       return {
@@ -922,7 +925,7 @@ export default function Actividades() {
       else if (col.key === 'barrio') w = 18;
       else if (col.key === 'telefono') w = 15;
       else if (col.key === 'email') w = 24;
-      else if (col.key === 'firma') w = 32;
+      else if (col.key === 'firma') w = 46;
       else {
         const calculated = col.width ? (col.width / 5) : 15;
         w = Math.max(8, Math.min(30, calculated));
@@ -1166,13 +1169,13 @@ export default function Actividades() {
       const rIdx = 10 + attendeeIdx;
       const row = worksheet.getRow(rIdx);
 
-      // Determine height of the row based on the availability of a physical signature
+      // Determine height of the row based on the availability of a physical signature (reduced to half)
       const hasFirmaImg = rowCells.some((val, colIndex) => {
         const key = activeKeys[colIndex];
         return key === 'firma' && val && val.startsWith('data:image');
       });
 
-      row.height = hasFirmaImg ? 60 : 25;
+      row.height = hasFirmaImg ? 32 : 22;
 
       for (let colIndex = 0; colIndex < rowCells.length; colIndex++) {
         const val = rowCells[colIndex];
@@ -1204,8 +1207,8 @@ export default function Actividades() {
               extension: 'png',
             });
             worksheet.addImage(sigImgId, {
-              tl: { col: colIndex + 0.05, row: rIdx - 1 + 0.05 } as any,
-              br: { col: colIndex + 1.05, row: rIdx - 1 + 1.05 } as any,
+              tl: { col: colIndex + 0.02, row: rIdx - 1 + 0.04 } as any,
+              br: { col: colIndex + 0.98, row: rIdx - 1 + 0.96 } as any,
               editAs: 'oneCell'
             });
             cell.value = ''; // Clean background text so raw Base64 data is never printed
