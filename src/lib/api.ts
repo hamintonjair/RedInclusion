@@ -13,7 +13,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 6000, // 6 seconds timeout to detect slow networks
+  timeout: 15000, // 15 seconds timeout for stable responses
 });
 
 const dispatchNetworkState = (state: 'online' | 'offline' | 'slow') => {

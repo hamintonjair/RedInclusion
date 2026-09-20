@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import cors from "cors";
+import compression from "compression";
 import { createServer as createViteServer } from "vite";
 import { MongoClient, ObjectId } from 'mongodb';
 import bcrypt from 'bcryptjs';
@@ -46,6 +47,7 @@ async function startServer() {
   // Asegurar que las peticiones OPTIONS (preflight) terminen rápido sin redirecciones
   app.options('*', cors());
 
+  app.use(compression());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
@@ -1366,12 +1368,8 @@ async function startServer() {
 
   // --- ASISTENTE CRUD ENDPOINTS ---
 
-  // GET /api/asistente
-  app.get("/api/asitente", async (req, res) => {
-    res.redirect("/api/asistente");
-  });
-
-  app.get("/api/asistente", async (req, res) => {
+  // GET /api/asistente and /api/asistentes
+  app.get(["/api/asistente", "/api/asistentes", "/api/asitente"], async (req, res) => {
     if (!db) {
       return res.json([
         {

@@ -235,7 +235,22 @@ export default function Asistentes() {
 
   const handleSaveSignature = () => {
     if (sigPad.current && !sigPad.current.isEmpty()) {
-      const signatureData = sigPad.current.getCanvas().toDataURL('image/png');
+      const canvas = sigPad.current.getCanvas();
+      let signatureData = '';
+      if (canvas && canvas.width > 500) {
+        const tempCanvas = document.createElement('canvas');
+        const scale = 500 / canvas.width;
+        tempCanvas.width = 500;
+        tempCanvas.height = Math.max(1, Math.round(canvas.height * scale));
+        const ctx = tempCanvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+          signatureData = tempCanvas.toDataURL('image/png');
+        }
+      }
+      if (!signatureData) {
+        signatureData = canvas.toDataURL('image/png');
+      }
       setFormData(prev => ({ ...prev, firma: signatureData }));
       setIsEditingSignature(false);
     }

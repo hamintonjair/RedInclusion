@@ -19,6 +19,16 @@ export function setRequestExecutor(executor: (config: any) => Promise<any>) {
 const memoryQueue: any[] = [];
 const memoryCache = new Map<string, any>();
 
+// Clean up any oversized legacy fallback cache from localStorage to keep quota clear
+if (typeof window !== 'undefined') {
+  try {
+    const rawCache = localStorage.getItem('fallback_requestCache');
+    if (rawCache && rawCache.length > 100000) {
+      localStorage.removeItem('fallback_requestCache');
+    }
+  } catch (e) {}
+}
+
 async function getDB() {
   try {
     return await openDB(DB_NAME, 1, {
@@ -45,16 +55,22 @@ function saveToLocalStorageFallback(storeName: string, item: any) {
     const existing = JSON.parse(existingStr);
     
     if (storeName === CACHE_STORE) {
+      const itemStr = JSON.stringify(item);
+      // Large datasets (>50KB) are handled safely by IndexedDB and memoryCache; skip localStorage to avoid quota crash
+      if (itemStr.length > 50000) {
+        return;
+      }
+
       const filtered = existing.filter((i: any) => i.url !== item.url);
       filtered.push(item);
       try {
         localStorage.setItem(key, JSON.stringify(filtered));
       } catch (innerError: any) {
         if (innerError.name === 'QuotaExceededError' || innerError.code === 22) {
-          console.warn('[OfflineSync-Fallback] LocalStorage quota exceeded for requestCache. Clearing cache fallback and retrying...');
-          localStorage.setItem(key, JSON.stringify([item]));
-        } else {
-          throw innerError;
+          try {
+            // If quota exceeded, remove the fallback cache key to free space for critical data
+            localStorage.removeItem(key);
+          } catch (e) {}
         }
       }
     } else {
@@ -432,9 +448,16 @@ export async function cacheResponse(url: string, data: any) {
       serializedData = JSON.parse(JSON.stringify(data));
     } catch (e) {}
 
-    // Store in memory cache & localStorage fallback synchronously immediately
+    // Store in memory cache immediately
     memoryCache.set(cleanUrl, serializedData);
-    saveToLocalStorageFallback(CACHE_STORE, { url: cleanUrl, data: serializedData, timestamp: Date.now() });
+
+    // Store in localStorage fallback only for lightweight objects (<50KB)
+    try {
+      const serializedLength = JSON.stringify(serializedData).length;
+      if (serializedLength < 50000) {
+        saveToLocalStorageFallback(CACHE_STORE, { url: cleanUrl, data: serializedData, timestamp: Date.now() });
+      }
+    } catch (e) {}
 
     // Store in IndexedDB
     try {
