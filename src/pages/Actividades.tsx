@@ -25,7 +25,7 @@ import {
   X,
   Pencil
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, parseLocalDate } from '../lib/utils';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -373,7 +373,7 @@ export default function Actividades() {
     const meetings = actividades.filter(a => a.tipo?.toLowerCase().includes('reun')).length;
     const activitiesCount = total - meetings;
     const thisMonth = actividades.filter(a => {
-      const d = new Date(a.fecha);
+      const d = parseLocalDate(a.fecha);
       const now = new Date();
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }).length;
@@ -455,7 +455,7 @@ export default function Actividades() {
       objetivo: act.objetivo || '',
       lugar: act.lugar || '',
       dependencia: act.dependencia || 'Secretaría de Inclusión y Cohesión Social',
-      fecha: act.fecha ? new Date(act.fecha).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      fecha: act.fecha ? (typeof act.fecha === 'string' ? act.fecha.split('T')[0] : new Date(act.fecha).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
       horaInicio: act.horaInicio || '08:00',
       horaFin: act.horaFin || '10:00',
       lineaTrabajo: act.lineaTrabajo || act.linea || '',
@@ -568,6 +568,10 @@ export default function Actividades() {
   const formatDateForExcel = (dateStr: any) => {
     if (!dateStr) return '';
     try {
+      if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) {
+        const [y, m, d] = dateStr.trim().split('-');
+        return `${d}/${m}/${y}`;
+      }
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) {
         return dateStr;
@@ -1087,7 +1091,7 @@ export default function Actividades() {
     fechaLabelCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
     const fechaValCell = worksheet.getCell(6, mergeTemaLabelEnd + 1);
-    fechaValCell.value = act.fecha ? new Date(act.fecha).toLocaleDateString('es-ES') : '';
+    fechaValCell.value = act.fecha ? parseLocalDate(act.fecha).toLocaleDateString('es-ES') : '';
     fechaValCell.font = { name: 'Segoe UI', size: 10 };
     fechaValCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
@@ -1502,7 +1506,7 @@ export default function Actividades() {
                       </div>
                       <div className="space-y-1">
                         <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Fecha</p>
-                        <p className="text-sm font-bold text-slate-700">{new Date(act.fecha).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                        <p className="text-sm font-bold text-slate-700">{parseLocalDate(act.fecha).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
                       </div>
                     </div>
 
@@ -2165,7 +2169,7 @@ export default function Actividades() {
                       </td>
                       <td className="px-6 py-6 border-b border-slate-50">
                         <div className="space-y-0.5">
-                          <p className="text-xs font-bold text-slate-800">{new Date(act.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                          <p className="text-xs font-bold text-slate-800">{parseLocalDate(act.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{act.horaInicio} - {act.horaFin}</p>
                         </div>
                       </td>
