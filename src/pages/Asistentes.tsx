@@ -24,6 +24,7 @@ import {
 import api from '../lib/api';
 import SignatureCanvas from 'react-signature-canvas';
 import { motion, AnimatePresence } from 'motion/react';
+import { trimCanvasToDataUrl } from '../lib/utils';
 
 export default function Asistentes() {
   // Lists and Data
@@ -96,6 +97,62 @@ export default function Asistentes() {
   // Signature States
   const [isEditingSignature, setIsEditingSignature] = useState(false);
   const sigPad = useRef<any>(null);
+  const sigContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-resize canvas to match container without coordinate offsets
+  const resizeSignatureCanvas = React.useCallback(() => {
+    if (!sigPad.current || !sigContainerRef.current) return;
+    const canvas = sigPad.current.getCanvas();
+    const container = sigContainerRef.current;
+    if (!canvas || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    const targetWidth = Math.round(rect.width);
+    const targetHeight = Math.round(rect.height);
+
+    if (targetWidth > 0 && targetHeight > 0 && (canvas.width !== targetWidth || canvas.height !== targetHeight)) {
+      const sigPadInstance = sigPad.current.getSignaturePad();
+      const existingData = sigPadInstance ? sigPadInstance.toData() : [];
+
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+
+      if (sigPadInstance) {
+        sigPadInstance.clear();
+        if (existingData && existingData.length > 0) {
+          sigPadInstance.fromData(existingData);
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showModal || (!isEditingSignature && formData.firma)) return;
+
+    const rafId = requestAnimationFrame(() => {
+      resizeSignatureCanvas();
+    });
+
+    const container = sigContainerRef.current;
+    let ro: ResizeObserver | null = null;
+    if (container && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => {
+        resizeSignatureCanvas();
+      });
+      ro.observe(container);
+    }
+
+    const handleResize = () => {
+      resizeSignatureCanvas();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [showModal, isEditingSignature, formData.firma, resizeSignatureCanvas]);
 
   // Load Assistants on mount
   useEffect(() => {
@@ -236,21 +293,7 @@ export default function Asistentes() {
   const handleSaveSignature = () => {
     if (sigPad.current && !sigPad.current.isEmpty()) {
       const canvas = sigPad.current.getCanvas();
-      let signatureData = '';
-      if (canvas && canvas.width > 500) {
-        const tempCanvas = document.createElement('canvas');
-        const scale = 500 / canvas.width;
-        tempCanvas.width = 500;
-        tempCanvas.height = Math.max(1, Math.round(canvas.height * scale));
-        const ctx = tempCanvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
-          signatureData = tempCanvas.toDataURL('image/png');
-        }
-      }
-      if (!signatureData) {
-        signatureData = canvas.toDataURL('image/png');
-      }
+      const signatureData = trimCanvasToDataUrl(canvas, 15);
       setFormData(prev => ({ ...prev, firma: signatureData }));
       setIsEditingSignature(false);
     }
@@ -297,7 +340,8 @@ export default function Asistentes() {
     // Try capturing current signature if pad is active and painted
     let finalFirma = formData.firma;
     if (isEditingSignature && sigPad.current && !sigPad.current.isEmpty()) {
-      finalFirma = sigPad.current.getCanvas().toDataURL('image/png');
+      const canvas = sigPad.current.getCanvas();
+      finalFirma = trimCanvasToDataUrl(canvas, 15);
     }
 
     const payload = {
@@ -864,12 +908,19 @@ export default function Asistentes() {
                 ) : (
                   /* Pad de Firma */
                   <div className="flex flex-col gap-2">
-                    <div className="w-full h-36 border-2 border-dashed border-emerald-200 bg-slate-50/60 rounded-xl relative overflow-hidden flex flex-col items-center justify-center group focus-within:border-emerald-500 transition-colors">
+                    <div 
+                      ref={sigContainerRef}
+                      className="w-full h-40 border-2 border-dashed border-emerald-300 bg-white rounded-xl relative overflow-hidden flex flex-col items-center justify-center group focus-within:border-emerald-500 transition-colors"
+                    >
                       <SignatureCanvas
                         ref={sigPad}
-                        penColor="black"
+                        penColor="#0f172a"
+                        minWidth={1.5}
+                        maxWidth={3.5}
+                        velocityFilterWeight={0.7}
                         canvasProps={{
-                          className: "signature-canvas w-full h-full cursor-crosshair absolute inset-0 z-10"
+                          className: "signature-canvas w-full h-full cursor-crosshair touch-none absolute inset-0 z-10",
+                          style: { width: '100%', height: '100%', touchAction: 'none' }
                         }}
                       />
                       {!formData.firma && (

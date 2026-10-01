@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Save, User, MapPin, HeartPulse, GraduationCap, ClipboardList, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { barriosPorComuna } from '../data/barriosPorComuna';
-import { cn } from '../lib/utils';
+import { cn, trimCanvasToDataUrl } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 
@@ -86,6 +86,7 @@ export const Registro: React.FC = () => {
 
   const [isFullScreenSignatureOpen, setIsFullScreenSignatureOpen] = React.useState(false);
   const fullScreenSigPad = React.useRef<any>(null);
+  const fullScreenCanvasContainerRef = React.useRef<HTMLDivElement>(null);
 
   const openSignatureModal = async () => {
     setIsFullScreenSignatureOpen(true);
@@ -114,61 +115,64 @@ export const Registro: React.FC = () => {
     }
   };
 
-  // Asegurar que el canvas tenga el tamaño correcto al mostrarse
-  React.useEffect(() => {
-    if ((isEditingSignature || !editId) && sigPad.current && sigContainerRef.current) {
-      const canvas = sigPad.current.getCanvas();
-      const container = sigContainerRef.current;
-      if (canvas && container) {
-        canvas.width = container.offsetWidth;
-        canvas.height = container.offsetHeight;
-        sigPad.current.clear(); // Limpiar para resetear el estado interno del canvas tras redimensionar
+  // Canvas resize helper for full screen signature pad with stroke preservation
+  const resizeFullScreenCanvas = React.useCallback(() => {
+    if (!fullScreenSigPad.current || !fullScreenCanvasContainerRef.current) return;
+    const canvas = fullScreenSigPad.current.getCanvas();
+    const container = fullScreenCanvasContainerRef.current;
+    if (!canvas || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    const targetWidth = Math.round(rect.width);
+    const targetHeight = Math.round(rect.height);
+
+    if (targetWidth > 0 && targetHeight > 0 && (canvas.width !== targetWidth || canvas.height !== targetHeight)) {
+      const sigPadInstance = fullScreenSigPad.current.getSignaturePad();
+      const existingData = sigPadInstance ? sigPadInstance.toData() : [];
+
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+
+      if (sigPadInstance) {
+        sigPadInstance.clear();
+        if (existingData && existingData.length > 0) {
+          sigPadInstance.fromData(existingData);
+        }
       }
     }
-  }, [isEditingSignature, editId]);
+  }, []);
 
   React.useEffect(() => {
-    if (isFullScreenSignatureOpen) {
-      // Delay slightly to allow the modal paint to complete perfectly
-      const timer = setTimeout(() => {
-        if (fullScreenSigPad.current) {
-          const canvas = fullScreenSigPad.current.getCanvas();
-          if (canvas) {
-            const rect = canvas.parentElement?.getBoundingClientRect();
-            if (rect) {
-              canvas.width = rect.width;
-              canvas.height = rect.height;
-              fullScreenSigPad.current.clear();
-            }
-          }
-        }
-      }, 300);
-      return () => clearTimeout(timer);
+    if (!isFullScreenSignatureOpen) return;
+
+    // Sizing immediately on next microtask/frame
+    const rafId = requestAnimationFrame(() => {
+      resizeFullScreenCanvas();
+    });
+
+    const container = fullScreenCanvasContainerRef.current;
+    let resizeObserver: ResizeObserver | null = null;
+    if (container && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        resizeFullScreenCanvas();
+      });
+      resizeObserver.observe(container);
     }
-  }, [isFullScreenSignatureOpen]);
 
-  React.useEffect(() => {
     const handleResize = () => {
-      if (isFullScreenSignatureOpen && fullScreenSigPad.current) {
-        const canvas = fullScreenSigPad.current.getCanvas();
-        if (canvas) {
-          const rect = canvas.parentElement?.getBoundingClientRect();
-          if (rect) {
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            fullScreenSigPad.current.clear();
-          }
-        }
-      }
+      resizeFullScreenCanvas();
     };
 
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
+
     return () => {
+      cancelAnimationFrame(rafId);
+      if (resizeObserver) resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
     };
-  }, [isFullScreenSignatureOpen]);
+  }, [isFullScreenSignatureOpen, resizeFullScreenCanvas]);
 
   const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -980,12 +984,13 @@ export const Registro: React.FC = () => {
                     type="button"
                     onClick={() => {
                       if (fullScreenSigPad.current) {
-                        const signatureData = fullScreenSigPad.current.getCanvas().toDataURL('image/png');
                         if (fullScreenSigPad.current.isEmpty()) {
                           setErrorMessage('Por favor, dibuje una firma antes de guardar.');
                           setTimeout(() => setErrorMessage(null), 4000);
                           return;
                         }
+                        const canvas = fullScreenSigPad.current.getCanvas();
+                        const signatureData = trimCanvasToDataUrl(canvas, 15);
                         setValue('firma', signatureData);
                         closeSignatureModal();
                       }
@@ -1017,13 +1022,19 @@ export const Registro: React.FC = () => {
 
               {/* Drawing Board Canvas Area */}
               <div className="flex-1 bg-white relative p-4 flex items-center justify-center min-h-[300px]">
-                <div className="absolute inset-4 border-4 border-dashed border-slate-200 rounded-2xl flex items-center justify-center overflow-hidden bg-slate-50">
+                <div 
+                  ref={fullScreenCanvasContainerRef}
+                  className="absolute inset-4 border-4 border-dashed border-slate-200 rounded-2xl flex items-center justify-center overflow-hidden bg-slate-50"
+                >
                   <SignatureCanvas
                     ref={fullScreenSigPad}
-                    penColor="black"
+                    penColor="#0f172a"
+                    minWidth={1.5}
+                    maxWidth={3.5}
+                    velocityFilterWeight={0.7}
                     canvasProps={{
-                      className: "absolute inset-0 w-full h-full cursor-crosshair",
-                      style: { width: '100%', height: '100%' }
+                      className: "absolute inset-0 w-full h-full cursor-crosshair touch-none",
+                      style: { width: '100%', height: '100%', touchAction: 'none' }
                     }}
                   />
                   
