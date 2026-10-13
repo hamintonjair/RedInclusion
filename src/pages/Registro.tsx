@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -85,10 +86,12 @@ export const Registro: React.FC = () => {
   const [isEditingSignature, setIsEditingSignature] = React.useState(false);
 
   const [isFullScreenSignatureOpen, setIsFullScreenSignatureOpen] = React.useState(false);
+  const [hidePortraitWarning, setHidePortraitWarning] = React.useState(false);
   const fullScreenSigPad = React.useRef<any>(null);
   const fullScreenCanvasContainerRef = React.useRef<HTMLDivElement>(null);
 
   const openSignatureModal = async () => {
+    setHidePortraitWarning(false);
     setIsFullScreenSignatureOpen(true);
     
     // Detect mobile and try to rotate screen orientation programmatically
@@ -786,7 +789,7 @@ export const Registro: React.FC = () => {
             
             <div className="border border-slate-200 rounded-xl p-6 flex flex-col items-center gap-6 bg-slate-50/30">
               {watch('firma') ? (
-                <div className="flex flex-col items-center gap-4 w-full">
+                <div key="signature-saved-box" className="flex flex-col items-center gap-4 w-full">
                   <div className="w-full max-w-lg h-48 bg-white rounded-xl border border-slate-200 flex items-center justify-center p-2 shadow-inner">
                     <img src={watch('firma')} alt="Firma Guardada" className="max-w-full max-h-full object-contain" />
                   </div>
@@ -805,7 +808,7 @@ export const Registro: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-4 w-full py-6">
+                <div key="signature-empty-box" className="flex flex-col items-center gap-4 w-full py-6">
                   <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -863,8 +866,9 @@ export const Registro: React.FC = () => {
 
       <AnimatePresence>
         {successModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-[4px] p-4">
+          <div key="success-modal-backdrop" className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-[4px] p-4">
             <motion.div 
+              key="success-modal-card"
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -895,47 +899,61 @@ export const Registro: React.FC = () => {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
 
+      <AnimatePresence>
         {errorMessage && (
-          <div className="fixed bottom-6 right-6 z-[100] max-w-sm w-full bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3 shadow-xl shadow-red-900/5">
+          <motion.div 
+            key="error-message-toast"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 right-6 z-[100] max-w-sm w-full bg-red-50 border border-red-100 p-4 rounded-2xl flex items-start gap-3 shadow-xl shadow-red-900/5"
+          >
             <AlertCircle className="text-brand-red shrink-0 mt-0.5" size={18} />
             <div className="space-y-1">
               <span className="block text-xs font-black text-brand-red uppercase tracking-wider">Error de Validación</span>
               <p className="text-xs text-red-700 font-medium leading-relaxed">{errorMessage}</p>
             </div>
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
-        {isFullScreenSignatureOpen && (
-          <div className="fixed inset-0 z-[140] bg-slate-900 flex flex-col text-white select-none">
-            {/* Top Header / Bar */}
-            <div className="bg-slate-950 px-6 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3 text-left">
-                <div className="p-2 bg-emerald-500/10 text-[#00a859] rounded-lg">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-wider text-white leading-tight">Lienzo de Firma Oficial</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight leading-none mt-0.5">
-                    Beneficiario: <span className="text-emerald-400 font-extrabold">{watch('nombre_completo') || 'Registro de Censo'}</span>
-                  </p>
-                </div>
+      {isFullScreenSignatureOpen && typeof document !== 'undefined' && createPortal(
+        <div 
+          key="fullscreen-signature-portal"
+          className="fixed inset-0 z-[9999] bg-slate-900 flex flex-col text-white select-none notranslate"
+          translate="no"
+        >
+          {/* Top Header / Bar */}
+          <div className="bg-slate-950 px-6 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3 text-left">
+              <div className="p-2 bg-emerald-500/10 text-[#00a859] rounded-lg">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
               </div>
-              <button
-                type="button"
-                onClick={closeSignatureModal}
-                className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer font-bold"
-              >
-                ✕
-              </button>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-wider text-white leading-tight">Lienzo de Firma Oficial</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight leading-none mt-0.5">
+                  Beneficiario: <span className="text-emerald-400 font-extrabold">{watch('nombre_completo') || 'Registro de Censo'}</span>
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={closeSignatureModal}
+              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer font-bold"
+            >
+              ✕
+            </button>
+          </div>
 
-            {/* Main Content Pane */}
-            <div className="flex-1 flex flex-col md:flex-row relative">
-              
-              {/* Optional warning when held in portrait mode on mobile/tablet */}
+          {/* Main Content Pane */}
+          <div className="flex-1 flex flex-col md:flex-row relative">
+            
+            {/* Optional warning when held in portrait mode on mobile/tablet */}
+            {!hidePortraitWarning && (
               <div className="portrait:flex landscape:hidden md:hidden absolute inset-0 z-30 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center space-y-6">
                 <div className="p-4 bg-emerald-500/5 rounded-full border border-emerald-500/10">
                   <DeviceRotateIllustration />
@@ -943,116 +961,111 @@ export const Registro: React.FC = () => {
                 <div className="space-y-2 max-w-sm">
                   <h4 className="text-lg font-black uppercase tracking-wider text-emerald-400">Girar Dispositivo</h4>
                   <p className="text-xs text-slate-300 font-semibold leading-relaxed">
-                    Para una firma digital cómoda, amplia y de alta resolución, por favor coloque su teléfono en posición **Horizontal (Apaisado)**.
+                    Para una firma digital cómoda, amplia y de alta resolución, por favor coloque su teléfono en posición <strong>Horizontal (Apaisado)</strong>.
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    const forcePortraitOverride = document.querySelector('.portrait\\:flex');
-                    if (forcePortraitOverride) {
-                      forcePortraitOverride.classList.add('hidden');
-                      forcePortraitOverride.classList.remove('portrait:flex');
-                    }
-                  }}
-                  className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-xs font-black uppercase tracking-wider rounded-xl transition-all border border-slate-700"
+                  onClick={() => setHidePortraitWarning(true)}
+                  className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-xs font-black uppercase tracking-wider rounded-xl transition-all border border-slate-700 cursor-pointer"
                 >
                   Continuar en Vertical
                 </button>
               </div>
+            )}
 
-              {/* Sidebar/Controls Section */}
-              <div className="w-full md:w-80 bg-slate-950 p-6 flex flex-col justify-between border-r border-slate-800 shrink-0 gap-6 text-left">
-                <div className="space-y-4">
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-[#00a859] border border-emerald-500/20">
-                    Censo Oficial
-                  </span>
-                  <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-                    Dibuje su firma con su dedo o lápiz óptico sobre el área blanca. Asegúrese de que coincida con su documento de identidad.
+            {/* Sidebar/Controls Section */}
+            <div className="w-full md:w-80 bg-slate-950 p-6 flex flex-col justify-between border-r border-slate-800 shrink-0 gap-6 text-left">
+              <div className="space-y-4">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-[#00a859] border border-emerald-500/20">
+                  Censo Oficial
+                </span>
+                <p className="text-xs text-slate-400 leading-relaxed font-semibold">
+                  Dibuje su firma con su dedo o lápiz óptico sobre el área blanca. Asegúrese de que coincida con su documento de identidad.
+                </p>
+                
+                <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
+                  <span className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">Documento</span>
+                  <p className="text-xs text-slate-300 font-extrabold font-mono">
+                    {watch('tipo_documento') || 'No ingresado'}: {watch('numero_documento') || 'No ingresado'}
                   </p>
-                  
-                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-                    <span className="block text-[9px] font-black text-slate-500 uppercase tracking-widest">Documento</span>
-                    <p className="text-xs text-slate-300 font-extrabold font-mono">
-                      {watch('tipo_documento') || 'No ingresado'}: {watch('numero_documento') || 'No ingresado'}
-                    </p>
-                  </div>
                 </div>
+              </div>
 
-                <div className="flex flex-col gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (fullScreenSigPad.current) {
-                        if (fullScreenSigPad.current.isEmpty()) {
-                          setErrorMessage('Por favor, dibuje una firma antes de guardar.');
-                          setTimeout(() => setErrorMessage(null), 4000);
-                          return;
-                        }
-                        const canvas = fullScreenSigPad.current.getCanvas();
-                        const signatureData = trimCanvasToDataUrl(canvas, 15);
-                        setValue('firma', signatureData);
-                        closeSignatureModal();
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (fullScreenSigPad.current) {
+                      if (fullScreenSigPad.current.isEmpty()) {
+                        setErrorMessage('Por favor, dibuje una firma antes de guardar.');
+                        setTimeout(() => setErrorMessage(null), 4000);
+                        return;
                       }
-                    }}
-                    className="w-full py-4 bg-[#00a859] hover:bg-[#00904a] text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-950/50 cursor-pointer font-sans"
-                  >
-                    Guardar Firma
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={() => {
-                      fullScreenSigPad.current?.clear();
-                    }}
-                    className="w-full py-3.5 bg-slate-850 hover:bg-slate-800 text-slate-200 text-xs font-black uppercase tracking-widest rounded-xl transition-all border border-slate-750 cursor-pointer font-sans"
-                  >
-                    Limpiar Lienzo
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={closeSignatureModal}
-                    className="w-full py-3 text-slate-400 hover:text-slate-200 text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer font-sans"
-                  >
-                    Volver Atrás
-                  </button>
-                </div>
-              </div>
-
-              {/* Drawing Board Canvas Area */}
-              <div className="flex-1 bg-white relative p-4 flex items-center justify-center min-h-[300px]">
-                <div 
-                  ref={fullScreenCanvasContainerRef}
-                  className="absolute inset-4 border-4 border-dashed border-slate-200 rounded-2xl flex items-center justify-center overflow-hidden bg-slate-50"
+                      const canvas = fullScreenSigPad.current.getCanvas();
+                      const signatureData = trimCanvasToDataUrl(canvas, 15);
+                      closeSignatureModal();
+                      setValue('firma', signatureData, { shouldDirty: true, shouldValidate: true });
+                    }
+                  }}
+                  className="w-full py-4 bg-[#00a859] hover:bg-[#00904a] text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-950/50 cursor-pointer font-sans"
                 >
-                  <SignatureCanvas
-                    ref={fullScreenSigPad}
-                    penColor="#0f172a"
-                    minWidth={1.5}
-                    maxWidth={3.5}
-                    velocityFilterWeight={0.7}
-                    canvasProps={{
-                      className: "absolute inset-0 w-full h-full cursor-crosshair touch-none",
-                      style: { width: '100%', height: '100%', touchAction: 'none' }
-                    }}
-                  />
-                  
-                  <div className="pointer-events-none opacity-[0.06] flex flex-col items-center justify-center select-none space-y-2 text-center">
-                    <span className="text-3xl lg:text-5xl font-black uppercase tracking-wider text-slate-900 leading-none">
-                      ÁREA DE FIRMA DIGITAL
-                    </span>
-                    <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-slate-900">
-                      MUNICIPIO DE QUIBDÓ
-                    </span>
-                  </div>
+                  Guardar Firma
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    fullScreenSigPad.current?.clear();
+                  }}
+                  className="w-full py-3.5 bg-slate-850 hover:bg-slate-800 text-slate-200 text-xs font-black uppercase tracking-widest rounded-xl transition-all border border-slate-750 cursor-pointer font-sans"
+                >
+                  Limpiar Lienzo
+                </button>
+
+                <button
+                  type="button"
+                  onClick={closeSignatureModal}
+                  className="w-full py-3 text-slate-400 hover:text-slate-200 text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer font-sans"
+                >
+                  Volver Atrás
+                </button>
+              </div>
+            </div>
+
+            {/* Drawing Board Canvas Area */}
+            <div className="flex-1 bg-white relative p-4 flex items-center justify-center min-h-[300px]">
+              <div 
+                ref={fullScreenCanvasContainerRef}
+                className="absolute inset-4 border-4 border-dashed border-slate-200 rounded-2xl flex items-center justify-center overflow-hidden bg-slate-50"
+              >
+                <SignatureCanvas
+                  ref={fullScreenSigPad}
+                  penColor="#0f172a"
+                  minWidth={1.5}
+                  maxWidth={3.5}
+                  velocityFilterWeight={0.7}
+                  canvasProps={{
+                    className: "absolute inset-0 w-full h-full cursor-crosshair touch-none",
+                    style: { width: '100%', height: '100%', touchAction: 'none' }
+                  }}
+                />
+                
+                <div className="pointer-events-none opacity-[0.06] flex flex-col items-center justify-center select-none space-y-2 text-center">
+                  <span className="text-3xl lg:text-5xl font-black uppercase tracking-wider text-slate-900 leading-none">
+                    ÁREA DE FIRMA DIGITAL
+                  </span>
+                  <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-slate-900">
+                    MUNICIPIO DE QUIBDÓ
+                  </span>
                 </div>
               </div>
-
             </div>
+
           </div>
-        )}
-      </AnimatePresence>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

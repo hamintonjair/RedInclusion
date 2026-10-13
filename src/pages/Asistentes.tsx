@@ -400,6 +400,7 @@ export default function Asistentes() {
       <AnimatePresence>
         {successMsg && (
           <motion.div 
+            key="asistentes-success-toast"
             initial={{ opacity: 0, y: 35, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -416,6 +417,7 @@ export default function Asistentes() {
 
         {errorMsg && !showModal && (
           <motion.div 
+            key="asistentes-error-toast"
             initial={{ opacity: 0, y: 35, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
